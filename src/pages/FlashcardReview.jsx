@@ -1,0 +1,372 @@
+// src/pages/FlashcardReview.jsx
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../config/supabaseClient';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  RotateCw, 
+  Home,
+  BookOpen,
+  Check,
+  X,
+  Shuffle
+} from 'lucide-react';
+import Navbar from '../components/Navbar';
+
+const FlashcardReview = () => {
+  const { quizId } = useParams();
+  const navigate = useNavigate();
+  
+  const [quiz, setQuiz] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [masteredCards, setMasteredCards] = useState(new Set());
+  const [needsReviewCards, setNeedsReviewCards] = useState(new Set());
+  const [shuffled, setShuffled] = useState(false);
+
+ useEffect(() => {
+  fetchQuizData();
+}, [quizId]);
+
+// Add timer cleanup if using timers
+useEffect(() => {
+  // timer logic
+  return () => clearInterval(timer);
+}, [dependencies]);
+
+  const fetchQuizData = async () => {
+    try {
+      // Fetch quiz details
+      const { data: quizData, error: quizError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('id', quizId)
+        .single();
+
+      if (quizError) throw quizError;
+
+      // Fetch questions
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('created_at', { ascending: true });
+
+      if (questionsError) throw questionsError;
+
+      setQuiz(quizData);
+      setQuestions(questionsData || []);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching quiz data:', err);
+      setError('Failed to load flashcards. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
+  };
+
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsFlipped(false);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setIsFlipped(false);
+    }
+  };
+
+  const handleMastered = () => {
+    const newMastered = new Set(masteredCards);
+    newMastered.add(questions[currentIndex].id);
+    setMasteredCards(newMastered);
+    
+    const newNeedsReview = new Set(needsReviewCards);
+    newNeedsReview.delete(questions[currentIndex].id);
+    setNeedsReviewCards(newNeedsReview);
+    
+    handleNext();
+  };
+
+  const handleNeedsReview = () => {
+    const newNeedsReview = new Set(needsReviewCards);
+    newNeedsReview.add(questions[currentIndex].id);
+    setNeedsReviewCards(newNeedsReview);
+    
+    const newMastered = new Set(masteredCards);
+    newMastered.delete(questions[currentIndex].id);
+    setMasteredCards(newMastered);
+    
+    handleNext();
+  };
+
+  const shuffleCards = () => {
+    const shuffledQuestions = [...questions].sort(() => Math.random() - 0.5);
+    setQuestions(shuffledQuestions);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setShuffled(true);
+  };
+
+  const resetProgress = () => {
+    setMasteredCards(new Set());
+    setNeedsReviewCards(new Set());
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  };
+
+  const getAnswerText = (question) => {
+    switch (question.question_type) {
+      case 'multiple_choice':
+        const correctOption = question.correct_answer;
+        return question[`option_${correctOption.toLowerCase()}`];
+      case 'true_false':
+        return question.correct_answer === 'A' ? 'True' : 'False';
+      case 'fill_blank':
+      case 'identification':
+      case 'essay':
+        return question.correct_text_answer;
+      default:
+        return 'No answer available';
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 font-medium">Loading flashcards...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="card max-w-md text-center">
+            <p className="text-red-600 mb-4">{error}</p>
+            <button onClick={() => navigate('/review-quizzes')} className="btn-primary">
+              Back to Review
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="card max-w-md text-center">
+            <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-xl font-bold text-gray-900 mb-2">No questions available</p>
+            <p className="text-gray-600 mb-4">This quiz doesn't have any questions yet.</p>
+            <button onClick={() => navigate('/review-quizzes')} className="btn-primary">
+              Back to Review
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  const currentQuestion = questions[currentIndex];
+  const progress = ((currentIndex + 1) / questions.length) * 100;
+  const masteredCount = masteredCards.size;
+  const needsReviewCount = needsReviewCards.size;
+
+  return (
+    <>
+      <Navbar />
+      <div className="min-h-screen py-8 bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="max-w-4xl mx-auto px-4">
+          {/* Header */}
+          <div className="mb-6">
+            <button
+              onClick={() => navigate('/review-quizzes')}
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 mb-4 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              Back to Review List
+            </button>
+            
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{quiz?.title}</h1>
+                <p className="text-gray-600">{quiz?.subject}</p>
+              </div>
+              <button
+                onClick={shuffleCards}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Shuffle className="w-4 h-4" />
+                Shuffle
+              </button>
+            </div>
+
+            {/* Progress Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-white rounded-lg p-3 text-center border-2 border-gray-200">
+                <p className="text-2xl font-bold text-gray-900">{currentIndex + 1}/{questions.length}</p>
+                <p className="text-xs text-gray-600">Cards</p>
+              </div>
+            
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Flashcard */}
+          <div className="mb-6" style={{ perspective: '1000px' }}>
+            <div
+              onClick={handleFlip}
+              className={`relative w-full cursor-pointer transition-transform duration-500 transform-style-3d ${
+                isFlipped ? 'rotate-y-180' : ''
+              }`}
+              style={{ 
+                transformStyle: 'preserve-3d',
+                transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                minHeight: '400px'
+              }}
+            >
+              {/* Front of Card */}
+              <div
+                className={`absolute w-full bg-white rounded-2xl shadow-2xl p-8 border-4 ${
+                  masteredCards.has(currentQuestion.id)
+                    ? 'border-green-400'
+                    : needsReviewCards.has(currentQuestion.id)
+                    ? 'border-orange-400'
+                    : 'border-purple-400'
+                } ${isFlipped ? 'invisible' : 'visible'}`}
+                style={{ 
+                  backfaceVisibility: 'hidden',
+                  minHeight: '400px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <div className="text-center">
+                  <div className="mb-4">
+                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                      Question
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 leading-relaxed">
+                    {currentQuestion.question_text}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-6">Click to reveal answer</p>
+                </div>
+              </div>
+
+              {/* Back of Card */}
+              <div
+                className={`absolute w-full bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-2xl p-8 text-white ${
+                  isFlipped ? 'visible' : 'invisible'
+                }`}
+                style={{ 
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                  minHeight: '400px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}
+              >
+                <div className="text-center">
+                  <div className="mb-4">
+                    <span className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-semibold">
+                      Answer
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold leading-relaxed">
+                    {getAnswerText(currentQuestion)}
+                  </p>
+                  <p className="text-sm text-white/80 mt-6">Click to see question</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+         
+
+          {/* Navigation */}
+          <div className="card">
+            <div className="flex items-center justify-between gap-4">
+              <button
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-5 h-5" />
+                Previous
+              </button>
+
+           
+              <button
+                onClick={handleNext}
+                disabled={currentIndex === questions.length - 1}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Completion Message */}
+          {currentIndex === questions.length - 1 && isFlipped && (
+            <div className="card mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">🎉 You've reached the last card!</h3>
+              <p className="text-gray-600 mb-4">
+                You've reviewed {questions.length} flashcards. Great job!
+              </p>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={resetProgress}
+                  className="btn-secondary"
+                >
+                  Review Again
+                </button>
+                <button
+                  onClick={() => navigate('/review-quizzes')}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Home className="w-5 h-5" />
+                  Back to Review List
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default FlashcardReview;
