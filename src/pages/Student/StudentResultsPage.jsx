@@ -1,10 +1,10 @@
 // src/pages/StudentResultsPage.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { Trophy, BookOpen, Clock, Eye, TrendingUp, Calendar } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const StudentResultsPage = () => {
   const { user } = useAuth();

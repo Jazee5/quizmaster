@@ -1,8 +1,8 @@
 // EditQuiz.jsx - Dark Gaming Theme (Mobile-Responsive) - Supports Multiple Choice & Fill-in-the-Blank
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { 
   Save, 
   X, 
@@ -15,7 +15,7 @@ import {
   AlertCircle,
   Calendar
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const EditQuiz = () => {
   const { id } = useParams();

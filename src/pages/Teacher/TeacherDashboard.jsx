@@ -1,8 +1,8 @@
 // TeacherDashboard.jsx - Dark Gaming Theme with Fixed Scrollbar
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import {
   PlusCircle,
   BookOpen,
@@ -21,7 +21,7 @@ import {
   Download,
   Shield
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const TeacherDashboard = () => {
   const { user,  loading: authLoading } = useAuth();
@@ -565,6 +565,7 @@ useEffect(() => {
 </div>
           </div>
       </div>
+      
       {/* Single Quiz Results Modal */}
       {showResultsModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -635,11 +636,11 @@ useEffect(() => {
   {showAllResultsModal && (
   <div
     className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
-    onClick={closeAllResultsModal} // closes modal on backdrop click
+    onClick={closeAllResultsModal} 
   >
     <div
       className="bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-full sm:max-w-5xl p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border-2 border-orange-500/30 pointer-events-auto"
-      onClick={(e) => e.stopPropagation()} // stops click inside modal from closing it
+      onClick={(e) => e.stopPropagation()} 
     >
       {/* Close Button */}
       <button

@@ -1,7 +1,7 @@
 // src/pages/FlashcardReview.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
+import { supabase } from '../../config/supabaseClient';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -12,7 +12,7 @@ import {
   X,
   Shuffle
 } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const FlashcardReview = () => {
   const { quizId } = useParams();

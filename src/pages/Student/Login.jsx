@@ -1,9 +1,9 @@
 // src/pages/Login.jsx - CAMPUS GMAIL VERSION
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { LogIn, Mail, Lock, AlertCircle, Zap } from 'lucide-react';
-import { supabase } from '../config/supabaseClient';
+import { supabase } from '../../config/supabaseClient';
 
 const Login = () => {
   const [email, setEmail] = useState(''); // Full Gmail now

@@ -1,8 +1,8 @@
 // src/pages/QuizResult.jsx
 import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "../config/supabaseClient";
-import Navbar from "../components/Navbar";
+import { supabase } from "../../config/supabaseClient";
+import Navbar from "../../components/Navbar";
 import QuizLeaderboard from "./QuizLeaderboard";
 import {
   CheckCircle,

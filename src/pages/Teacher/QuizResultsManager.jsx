@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Medal, Award, TrendingUp, Users, Calendar, Download, ChevronDown, ChevronUp } from 'lucide-react';
-import { supabase } from '../config/supabaseClient';
+import { supabase } from '../../config/supabaseClient';
 
 async function fetchQuizzes() {
   // Fetch all quizzes

@@ -1,10 +1,10 @@
 // src/pages/CreateQuiz.jsx - Responsive Dark Gaming Theme
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { PlusCircle, Trash2, Save, AlertCircle, GraduationCap, BookOpen, Calendar, FileText, Clock, HelpCircle, Sparkles } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const CreateQuiz = () => {
   const { user } = useAuth();

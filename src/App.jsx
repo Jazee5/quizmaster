@@ -7,19 +7,19 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
 
 // Pages
-import TeacherLogin from './pages/TeacherLogin';
-import TeacherDashboard from './pages/TeacherDashboard';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import CreateQuiz from './pages/CreateQuiz';
-import EditQuiz from './pages/EditQuiz';
-import QuizResult from './pages/QuizResult';
-import TakeQuiz from './pages/TakeQuiz';
-import QuizResultsDetail from './pages/QuizResultsDetail';
-import QuizResultsManager from './pages/QuizResultsManager';
-import StudentResultsPage from './pages/StudentResultsPage';
-import ReviewQuizzesPage from './pages/ReviewQuizzesPage';
-import FlashcardReview from './pages/FlashcardReview';
+import TeacherLogin from './pages/Teacher/TeacherLogin';
+import TeacherDashboard from './pages/Teacher/TeacherDashboard';
+import Login from './pages/Student/Login';
+import Dashboard from './pages/Student/Dashboard';
+import CreateQuiz from './pages/Teacher/CreateQuiz';
+import EditQuiz from './pages/Teacher/EditQuiz';
+import QuizResult from './pages/Student/QuizResult';
+import TakeQuiz from './pages/Student/TakeQuiz';
+import QuizResultsDetail from './pages/Student/QuizResultsDetail';
+import QuizResultsManager from './pages/Teacher/QuizResultsManager';
+import StudentResultsPage from './pages/Student/StudentResultsPage';
+import ReviewQuizzesPage from './pages/Student/ReviewQuizzesPage';
+import FlashcardReview from './pages/Student/FlashcardReview';
 
 function App() {
   return (

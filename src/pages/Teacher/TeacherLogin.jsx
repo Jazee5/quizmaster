@@ -1,7 +1,7 @@
 // src/pages/TeacherLogin.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../config/supabaseClient';
+import { supabase } from '../../config/supabaseClient';
 import { LogIn, Mail, Lock, AlertCircle, Shield } from 'lucide-react';
 
 const TeacherLogin = () => {

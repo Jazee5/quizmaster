@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { ChevronLeft, Download, Trophy, Medal, Award } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const QuizResultsDetail = () => {
   const { quizId } = useParams();

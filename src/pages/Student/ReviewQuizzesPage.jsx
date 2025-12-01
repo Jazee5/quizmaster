@@ -1,10 +1,10 @@
 // src/pages/ReviewQuizzesPage.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { BookOpen, Play, Filter, Search, X } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const ReviewQuizzesPage = () => {
   const { user } = useAuth();

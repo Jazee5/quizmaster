@@ -1,10 +1,10 @@
 // src/pages/Dashboard.jsx - Compact Responsive Version
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { supabase } from '../config/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabaseClient';
 import { BookOpen, Trophy, Award, KeyRound } from 'lucide-react';
-import Navbar from '../components/Navbar';
+import Navbar from '../../components/Navbar';
 
 const Dashboard = () => {
   const { user } = useAuth();
