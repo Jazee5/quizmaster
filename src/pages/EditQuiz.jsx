@@ -1,4 +1,4 @@
-// EditQuiz.jsx - Dark Gaming Theme (Mobile-Responsive)
+// EditQuiz.jsx - Dark Gaming Theme (Mobile-Responsive) - Supports Multiple Choice & Fill-in-the-Blank
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -12,7 +12,8 @@ import {
   BookOpen,
   Clock,
   Hash,
-  AlertCircle
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
@@ -30,11 +31,29 @@ const EditQuiz = () => {
     subject: '',
     course: '',
     time_limit: 30,
-    quiz_code: ''
+    quiz_code: '',
+    open_time: '',
+    close_time: '',
   });
   
   const [questions, setQuestions] = useState([]);
   const [deletedQuestions, setDeletedQuestions] = useState([]);
+
+  // Helper function to format datetime for datetime-local input
+  const formatDateTimeLocal = (isoString) => {
+    if (!isoString) return '';
+    // Just remove the timezone part and seconds for datetime-local input
+    // Keep the time as-is without conversion
+    return isoString.slice(0, 16);
+  };
+
+  // Helper function to format datetime for saving (keeps Philippine time)
+  const formatForDatabase = (localDateTime) => {
+    if (!localDateTime) return null;
+    // Keep the datetime as-is, just add seconds if needed
+    // This stores the exact time you entered without timezone conversion
+    return localDateTime + ':00';
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -67,10 +86,25 @@ const EditQuiz = () => {
         subject: quizData.subject,
         course: quizData.course,
         time_limit: quizData.time_limit,
-        quiz_code: quizData.quiz_code
+        quiz_code: quizData.quiz_code,
+        open_time: formatDateTimeLocal(quizData.open_time),
+        close_time: formatDateTimeLocal(quizData.close_time),
       });
 
-      setQuestions(questionsData || []);
+      // Map the questions with support for both types
+      const mappedQuestions = (questionsData || []).map(q => ({
+        id: q.id,
+        question_text: q.question_text || '',
+        question_type: q.question_type || 'multiple_choice',
+        option_a: q.option_a || '',
+        option_b: q.option_b || '',
+        option_c: q.option_c || '',
+        option_d: q.option_d || '',
+        correct_answer: q.correct_answer || 'A',
+        correct_text_answer: q.correct_text_answer || ''
+      }));
+
+      setQuestions(mappedQuestions);
     } catch (err) {
       console.error('Error fetching quiz:', err);
       setError('Failed to load quiz data. You may not have permission to edit this quiz.');
@@ -93,11 +127,13 @@ const EditQuiz = () => {
   const addQuestion = () => {
     setQuestions([...questions, {
       question_text: '',
+      question_type: 'multiple_choice',
       option_a: '',
       option_b: '',
       option_c: '',
       option_d: '',
-      correct_answer: 'A'
+      correct_answer: 'A',
+      correct_text_answer: ''
     }]);
   };
 
@@ -117,10 +153,21 @@ const EditQuiz = () => {
     
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      if (!q.question_text.trim()) { setError(`Question ${i + 1}: Question text is required`); return false; }
-      if (!q.option_a.trim() || !q.option_b.trim() || !q.option_c.trim() || !q.option_d.trim()) {
-        setError(`Question ${i + 1}: All options must be filled`);
-        return false;
+      if (!q.question_text.trim()) { 
+        setError(`Question ${i + 1}: Question text is required`); 
+        return false; 
+      }
+      
+      if (q.question_type === 'multiple_choice') {
+        if (!q.option_a.trim() || !q.option_b.trim() || !q.option_c.trim() || !q.option_d.trim()) {
+          setError(`Question ${i + 1}: All options must be filled for multiple choice`);
+          return false;
+        }
+      } else if (q.question_type === 'fill_blank') {
+        if (!q.correct_text_answer.trim()) {
+          setError(`Question ${i + 1}: Correct answer is required for fill-in-the-blank`);
+          return false;
+        }
       }
     }
     return true;
@@ -139,7 +186,9 @@ const EditQuiz = () => {
           title: quizData.title,
           subject: quizData.subject,
           course: quizData.course,
-          time_limit: quizData.time_limit
+          time_limit: quizData.time_limit,
+          open_time: formatForDatabase(quizData.open_time),
+          close_time: formatForDatabase(quizData.close_time),
         })
         .eq('id', id)
         .eq('user_id', user.id);
@@ -155,17 +204,21 @@ const EditQuiz = () => {
       }
 
       for (const question of questions) {
+        const questionData = {
+          question_text: question.question_text,
+          question_type: question.question_type,
+          option_a: question.question_type === 'multiple_choice' ? question.option_a : '',
+          option_b: question.question_type === 'multiple_choice' ? question.option_b : '',
+          option_c: question.question_type === 'multiple_choice' ? question.option_c : '',
+          option_d: question.question_type === 'multiple_choice' ? question.option_d : '',
+          correct_answer: question.question_type === 'multiple_choice' ? question.correct_answer : null,
+          correct_text_answer: question.question_type === 'fill_blank' ? question.correct_text_answer : null
+        };
+
         if (question.id) {
           const { error: updateError } = await supabase
             .from('questions')
-            .update({
-              question_text: question.question_text,
-              option_a: question.option_a,
-              option_b: question.option_b,
-              option_c: question.option_c,
-              option_d: question.option_d,
-              correct_answer: question.correct_answer
-            })
+            .update(questionData)
             .eq('id', question.id);
           if (updateError) throw updateError;
         } else {
@@ -173,12 +226,7 @@ const EditQuiz = () => {
             .from('questions')
             .insert({
               quiz_id: id,
-              question_text: question.question_text,
-              option_a: question.option_a,
-              option_b: question.option_b,
-              option_c: question.option_c,
-              option_d: question.option_d,
-              correct_answer: question.correct_answer
+              ...questionData
             });
           if (insertError) throw insertError;
         }
@@ -253,7 +301,6 @@ const EditQuiz = () => {
                 { label: 'Quiz Title *', field: 'title', placeholder: 'Enter quiz title', type: 'text' },
                 { label: 'Course *', field: 'course', placeholder: 'e.g., Web Development', type: 'text' },
                 { label: 'Subject *', field: 'subject', placeholder: 'e.g., JavaScript', type: 'text' },
-                { label: 'Time Limit (minutes) *', field: 'time_limit', placeholder: '', type: 'number', icon: Clock },
               ].map(({ label, field, placeholder, type, icon: Icon }, idx) => (
                 <div key={idx}>
                   <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
@@ -278,6 +325,35 @@ const EditQuiz = () => {
                   <Hash className="w-4 h-4" />
                   <span className="font-mono font-bold tracking-wider">{quizData.quiz_code}</span>
                 </div>
+              </div>
+
+              {/* Open Time */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-green-400" />
+                  Opens At
+                </label>
+                <input
+                  type="datetime-local"
+                  value={quizData.open_time}
+                  onChange={(e) => handleQuizDataChange('open_time', e.target.value)}
+                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                />
+              </div>
+
+              {/* Close Time */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-red-400" />
+                  Closes At
+                </label>
+                <input
+                  type="datetime-local"
+                  value={quizData.close_time}
+                  onChange={(e) => handleQuizDataChange('close_time', e.target.value)}
+                  min={quizData.open_time || ''}
+                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                />
               </div>
             </div>
           </div>
@@ -324,6 +400,20 @@ const EditQuiz = () => {
                     </div>
 
                     <div className="space-y-4">
+                      {/* Question Type Selector */}
+                      <div>
+                        <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">Question Type *</label>
+                        <select
+                          value={question.question_type}
+                          onChange={(e) => handleQuestionChange(index, 'question_type', e.target.value)}
+                          className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold"
+                        >
+                          <option value="multiple_choice">Multiple Choice</option>
+                          <option value="fill_blank">Fill in the Blank</option>
+                        </select>
+                      </div>
+
+                      {/* Question Text */}
                       <div>
                         <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">Question Text *</label>
                         <textarea
@@ -335,38 +425,56 @@ const EditQuiz = () => {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {['A', 'B', 'C', 'D'].map((option) => (
-                          <div key={option}>
-                            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                              Option {option} *
-                            </label>
-                            <input
-                              type="text"
-                              value={question[`option_${option.toLowerCase()}`]}
-                              onChange={(e) => handleQuestionChange(index, `option_${option.toLowerCase()}`, e.target.value)}
-                              className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
-                              placeholder={`Enter option ${option}`}
-                            />
+                      {/* Conditional Rendering Based on Question Type */}
+                      {question.question_type === 'multiple_choice' ? (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {['A', 'B', 'C', 'D'].map((option) => (
+                              <div key={option}>
+                                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                                  Option {option} *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={question[`option_${option.toLowerCase()}`]}
+                                  onChange={(e) => handleQuestionChange(index, `option_${option.toLowerCase()}`, e.target.value)}
+                                  className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                                  placeholder={`Enter option ${option}`}
+                                />
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
 
-                      <div>
-                        <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                          Correct Answer *
-                        </label>
-                        <select
-                          value={question.correct_answer}
-                          onChange={(e) => handleQuestionChange(index, 'correct_answer', e.target.value)}
-                          className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all uppercase font-semibold"
-                        >
-                          <option value="A">Option A</option>
-                          <option value="B">Option B</option>
-                          <option value="C">Option C</option>
-                          <option value="D">Option D</option>
-                        </select>
-                      </div>
+                          <div>
+                            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                              Correct Answer *
+                            </label>
+                            <select
+                              value={question.correct_answer || 'A'}
+                              onChange={(e) => handleQuestionChange(index, 'correct_answer', e.target.value)}
+                              className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all uppercase font-semibold"
+                            >
+                              <option value="A">Option A</option>
+                              <option value="B">Option B</option>
+                              <option value="C">Option C</option>
+                              <option value="D">Option D</option>
+                            </select>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                            Correct Answer *
+                          </label>
+                          <input
+                            type="text"
+                            value={question.correct_text_answer}
+                            onChange={(e) => handleQuestionChange(index, 'correct_text_answer', e.target.value)}
+                            className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all"
+                            placeholder="Enter the correct answer"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -379,14 +487,14 @@ const EditQuiz = () => {
             <button
               onClick={() => navigate('/teacher-dashboard')}
               disabled={saving}
-              className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl flex items-center gap-2 transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-8 rounded-xl flex items-center gap-2 justify-center transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-5 h-5" /> Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-xl flex items-center gap-2 hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105 transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full sm:w-auto bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white font-bold py-4 px-8 rounded-xl flex items-center gap-2 justify-center hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105 transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               <Save className="w-5 h-5" /> {saving ? 'Saving...' : 'Save Changes'}
             </button>

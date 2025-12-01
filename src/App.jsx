@@ -3,14 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Landing Page
+import Landing from './pages/Landing';
+
 // Pages
 import TeacherLogin from './pages/TeacherLogin';
-import TeacherSignup from './pages/TeacherSignup';
 import TeacherDashboard from './pages/TeacherDashboard';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
-import QuizBrowser from './pages/QuizBrowser';
 import CreateQuiz from './pages/CreateQuiz';
 import EditQuiz from './pages/EditQuiz';
 import QuizResult from './pages/QuizResult';
@@ -26,22 +26,24 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
+
+          {/* Landing Page */}
+          <Route path="/" element={<Landing />} />
+
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
           <Route path="/teacher-login" element={<TeacherLogin />} />
-          <Route path="/teacher-signup" element={<TeacherSignup />} />
-          
-          {/* Protected routes with ProtectedRoute wrapper */}
+
+          {/* Protected routes */}
           <Route 
             path="/teacher-dashboard" 
             element={
               <ProtectedRoute requiredRole="teacher">
                 <TeacherDashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          
+
           <Route
             path="/dashboard"
             element={
@@ -51,14 +53,7 @@ function App() {
             }
           />
 
-          <Route
-            path="/browse-quizzes"
-            element={
-              <ProtectedRoute requiredRole="student">
-                <QuizBrowser />
-              </ProtectedRoute>
-            }
-          />
+         
 
           <Route
             path="/create-quiz"
@@ -77,7 +72,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/quiz-result/:quizId"
             element={
@@ -104,7 +99,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/results"
             element={
@@ -136,13 +131,14 @@ function App() {
             path="/edit-quiz/:id"
             element={
               <ProtectedRoute requiredRole="teacher">
-                <EditQuiz/>
+                <EditQuiz />
               </ProtectedRoute>
             }
           />
-          
-         <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+
+          {/* If no route found → go to Landing */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+
         </Routes>
       </AuthProvider>
     </Router>

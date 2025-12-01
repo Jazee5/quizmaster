@@ -129,16 +129,16 @@ const StudentResultsPage = () => {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900">
       <Navbar />
-      <div className="min-h-screen py-8 bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 relative overflow-hidden">
+      <div className="relative py-8">
         {/* Glowing orbs */}
-        <div className="absolute top-20 left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="fixed top-20 left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse pointer-events-none -z-10"></div>
+        <div className="fixed bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse pointer-events-none -z-10" style={{ animationDelay: '1s' }}></div>
+        <div className="fixed top-1/2 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse pointer-events-none -z-10" style={{ animationDelay: '2s' }}></div>
 
         {/* Scanline effect */}
-        <div className="absolute inset-0 pointer-events-none opacity-5">
+        <div className="fixed inset-0 pointer-events-none opacity-5 -z-10">
           <div className="absolute inset-0" style={{
             backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
           }}></div>
@@ -214,9 +214,9 @@ const StudentResultsPage = () => {
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">No quiz results yet</h3>
                   <p className="text-gray-400 mb-6">Take your first quiz to see your results here!</p>
-                  <Link to="/browse-quizzes" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-purple-500/50 uppercase tracking-wider">
+                  <Link to="/dashboard" className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-purple-500/50 uppercase tracking-wider">
                     <BookOpen className="w-5 h-5" />
-                    Browse Quizzes
+                    Back to Dashboard
                   </Link>
                 </div>
               ) : (
@@ -320,7 +320,7 @@ const StudentResultsPage = () => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

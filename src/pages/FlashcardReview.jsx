@@ -28,15 +28,9 @@ const FlashcardReview = () => {
   const [needsReviewCards, setNeedsReviewCards] = useState(new Set());
   const [shuffled, setShuffled] = useState(false);
 
- useEffect(() => {
-  fetchQuizData();
-}, [quizId]);
-
-// Add timer cleanup if using timers
-useEffect(() => {
-  // timer logic
-  return () => clearInterval(timer);
-}, [dependencies]);
+  useEffect(() => {
+    fetchQuizData();
+  }, [quizId]);
 
   const fetchQuizData = async () => {
     try {
@@ -145,10 +139,10 @@ useEffect(() => {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-black to-gray-900">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-200 border-t-purple-600 mx-auto mb-4"></div>
-            <p className="text-gray-600 font-medium">Loading flashcards...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-300 font-medium">Loading flashcards...</p>
           </div>
         </div>
       </>
@@ -159,10 +153,13 @@ useEffect(() => {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="card max-w-md text-center">
-            <p className="text-red-600 mb-4">{error}</p>
-            <button onClick={() => navigate('/review-quizzes')} className="btn-primary">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-black to-gray-900">
+          <div className="bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md text-center shadow-xl">
+            <p className="text-red-400 mb-4 text-lg">{error}</p>
+            <button 
+              onClick={() => navigate('/review-quizzes')} 
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-all"
+            >
               Back to Review
             </button>
           </div>
@@ -175,12 +172,15 @@ useEffect(() => {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="card max-w-md text-center">
-            <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-xl font-bold text-gray-900 mb-2">No questions available</p>
-            <p className="text-gray-600 mb-4">This quiz doesn't have any questions yet.</p>
-            <button onClick={() => navigate('/review-quizzes')} className="btn-primary">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 via-black to-gray-900">
+          <div className="bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md text-center shadow-xl">
+            <BookOpen className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+            <p className="text-xl font-bold text-gray-100 mb-2">No questions available</p>
+            <p className="text-gray-400 mb-4">This quiz doesn't have any questions yet.</p>
+            <button 
+              onClick={() => navigate('/review-quizzes')} 
+              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-all"
+            >
               Back to Review
             </button>
           </div>
@@ -196,14 +196,13 @@ useEffect(() => {
 
   return (
     <>
-      <Navbar />
-      <div className="min-h-screen py-8 bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="min-h-screen py-8 bg-gradient-to-b from-gray-900 via-black to-gray-900">
         <div className="max-w-4xl mx-auto px-4">
           {/* Header */}
           <div className="mb-6">
             <button
               onClick={() => navigate('/review-quizzes')}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 mb-4 transition-colors"
+              className="text-gray-400 hover:text-purple-400 flex items-center gap-2 mb-4 transition-colors"
             >
               <ChevronLeft className="w-5 h-5" />
               Back to Review List
@@ -211,12 +210,14 @@ useEffect(() => {
             
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{quiz?.title}</h1>
-                <p className="text-gray-600">{quiz?.subject}</p>
+                <h1 className="text-3xl font-bold text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text">
+                  {quiz?.title}
+                </h1>
+                <p className="text-gray-400 mt-1">{quiz?.subject}</p>
               </div>
               <button
                 onClick={shuffleCards}
-                className="btn-secondary flex items-center gap-2"
+                className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-purple-300 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 shadow-lg"
               >
                 <Shuffle className="w-4 h-4" />
                 Shuffle
@@ -225,17 +226,16 @@ useEffect(() => {
 
             {/* Progress Stats */}
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-white rounded-lg p-3 text-center border-2 border-gray-200">
-                <p className="text-2xl font-bold text-gray-900">{currentIndex + 1}/{questions.length}</p>
-                <p className="text-xs text-gray-600">Cards</p>
+              <div className="bg-gray-800/70 border border-gray-700 rounded-xl p-3 text-center shadow-lg">
+                <p className="text-2xl font-bold text-purple-300">{currentIndex + 1}/{questions.length}</p>
+                <p className="text-xs text-gray-400">Cards</p>
               </div>
-            
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full h-3 bg-gray-800 border border-gray-700 rounded-full overflow-hidden shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+                className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500 transition-all duration-300 shadow-lg"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -256,12 +256,12 @@ useEffect(() => {
             >
               {/* Front of Card */}
               <div
-                className={`absolute w-full bg-white rounded-2xl shadow-2xl p-8 border-4 ${
+                className={`absolute w-full bg-gray-800 rounded-2xl shadow-2xl p-8 border-4 ${
                   masteredCards.has(currentQuestion.id)
-                    ? 'border-green-400'
+                    ? 'border-green-500/50'
                     : needsReviewCards.has(currentQuestion.id)
-                    ? 'border-orange-400'
-                    : 'border-purple-400'
+                    ? 'border-orange-500/50'
+                    : 'border-purple-500/50'
                 } ${isFlipped ? 'invisible' : 'visible'}`}
                 style={{ 
                   backfaceVisibility: 'hidden',
@@ -273,11 +273,11 @@ useEffect(() => {
               >
                 <div className="text-center">
                   <div className="mb-4">
-                    <span className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                    <span className="px-4 py-2 bg-purple-900/50 text-purple-300 rounded-full text-sm font-semibold border border-purple-500/30">
                       Question
                     </span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-900 leading-relaxed">
+                  <p className="text-2xl font-bold text-gray-100 leading-relaxed">
                     {currentQuestion.question_text}
                   </p>
                   <p className="text-sm text-gray-500 mt-6">Click to reveal answer</p>
@@ -286,7 +286,7 @@ useEffect(() => {
 
               {/* Back of Card */}
               <div
-                className={`absolute w-full bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-2xl p-8 text-white ${
+                className={`absolute w-full bg-gradient-to-br from-purple-600 via-pink-600 to-indigo-600 rounded-2xl shadow-2xl p-8 text-white border-2 border-purple-500/30 ${
                   isFlipped ? 'visible' : 'invisible'
                 }`}
                 style={{ 
@@ -313,25 +313,22 @@ useEffect(() => {
             </div>
           </div>
 
-         
-
           {/* Navigation */}
-          <div className="card">
+          <div className="bg-gray-800/70 border border-gray-700 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={handlePrevious}
                 disabled={currentIndex === 0}
-                className="btn-secondary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-700"
               >
                 <ChevronLeft className="w-5 h-5" />
                 Previous
               </button>
 
-           
               <button
                 onClick={handleNext}
                 disabled={currentIndex === questions.length - 1}
-                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
                 Next
                 <ChevronRight className="w-5 h-5" />
@@ -341,21 +338,21 @@ useEffect(() => {
 
           {/* Completion Message */}
           {currentIndex === questions.length - 1 && isFlipped && (
-            <div className="card mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">🎉 You've reached the last card!</h3>
-              <p className="text-gray-600 mb-4">
+            <div className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-2 border-green-500/50 rounded-2xl p-6 mt-6 text-center shadow-xl">
+              <h3 className="text-2xl font-bold text-green-300 mb-2">🎉 You've reached the last card!</h3>
+              <p className="text-gray-300 mb-4">
                 You've reviewed {questions.length} flashcards. Great job!
               </p>
               <div className="flex gap-4 justify-center">
                 <button
                   onClick={resetProgress}
-                  className="btn-secondary"
+                  className="bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-200 font-semibold py-2 px-6 rounded-lg transition-all"
                 >
                   Review Again
                 </button>
                 <button
                   onClick={() => navigate('/review-quizzes')}
-                  className="btn-primary flex items-center gap-2"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2 px-6 rounded-lg transition-all flex items-center gap-2 shadow-lg"
                 >
                   <Home className="w-5 h-5" />
                   Back to Review List

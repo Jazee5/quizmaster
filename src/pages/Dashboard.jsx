@@ -1,4 +1,4 @@
-// src/pages/Dashboard.jsx - Responsive Version
+// src/pages/Dashboard.jsx - Compact Responsive Version
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -117,26 +117,26 @@ const Dashboard = () => {
     <>
       <Navbar />
 
-      <div className="min-h-screen py-8 sm:py-10 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 px-3 sm:px-6 overflow-x-hidden">
-        <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+      <div className="min-h-screen py-4 sm:py-6 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 px-3 sm:px-6 overflow-x-hidden">
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 relative z-10">
           {/* Welcome */}
           <section className="animate-fade-in text-center sm:text-left">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2 drop-shadow-lg break-words">
+            <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1 drop-shadow-lg break-words">
               WELCOME BACK, {user?.user_metadata?.username?.toUpperCase() || user?.email?.split('@')[0]?.toUpperCase()} 👋
             </h1>
-            <p className="text-gray-300 text-xs sm:text-base md:text-lg font-semibold uppercase tracking-wide">
+            <p className="text-gray-300 text-xs sm:text-sm md:text-base font-semibold uppercase tracking-wide">
               Ready to Dominate the Leaderboard?
             </p>
           </section>
 
           {/* Join a Quiz */}
-          <section className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border-2 border-cyan-500/30 p-4 sm:p-6 shadow-2xl transition-all duration-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 mb-4">
-              <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-                <KeyRound className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
+          <section className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border-2 border-cyan-500/30 p-3 sm:p-5 shadow-2xl transition-all duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mb-3">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-br from-cyan-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                <KeyRound className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold text-white uppercase tracking-wide">
+                <h2 className="text-base sm:text-xl font-bold text-white uppercase tracking-wide">
                   Join a Quiz
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wider font-semibold">
@@ -171,60 +171,47 @@ const Dashboard = () => {
           </section>
 
           {/* Stats */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div className="bg-gray-800/50 rounded-2xl border-2 border-green-500/30 p-5 hover:shadow-2xl transition-all">
-              <p className="text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-gray-800/50 rounded-2xl border-2 border-green-500/30 p-4 hover:shadow-2xl transition-all">
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">
                 Quizzes Taken
               </p>
               <div className="flex justify-between items-center">
-                <p className="text-4xl sm:text-5xl font-extrabold text-green-400">
+                <p className="text-3xl sm:text-4xl font-extrabold text-green-400">
                   {stats.totalScores}
                 </p>
-                <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-green-400" />
+                <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-green-400" />
               </div>
             </div>
 
-            <div className="bg-gray-800/50 rounded-2xl border-2 border-yellow-500/30 p-5 hover:shadow-2xl transition-all">
-              <p className="text-sm text-gray-400 font-bold uppercase tracking-wider mb-2">
+            <div className="bg-gray-800/50 rounded-2xl border-2 border-yellow-500/30 p-4 hover:shadow-2xl transition-all">
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">
                 Average Score
               </p>
               <div className="flex justify-between items-center">
-                <p className="text-4xl sm:text-5xl font-extrabold text-yellow-400">
+                <p className="text-3xl sm:text-4xl font-extrabold text-yellow-400">
                   {stats.avgScore}%
                 </p>
-                <Award className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-400" />
+                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400" />
               </div>
             </div>
           </section>
 
           {/* Quick Actions */}
           <section>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-white uppercase tracking-wide drop-shadow-lg">
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white uppercase tracking-wide drop-shadow-lg">
               Quick Actions
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <Link
-                to="/browse-quizzes"
-                className="bg-gray-800/50 rounded-2xl p-5 border-2 border-blue-500/30 hover:border-blue-400 hover:shadow-2xl transition-all flex items-center gap-3 sm:gap-4"
-              >
-                <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400" />
-                <div>
-                  <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 uppercase tracking-wide">
-                    Browse Quizzes
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wider font-semibold">
-                    Find By Course/Subject
-                  </p>
-                </div>
-              </Link>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+             
 
               <Link
                 to="/review-quizzes"
-                className="bg-gray-800/50 rounded-2xl p-5 border-2 border-emerald-500/30 hover:border-emerald-400 hover:shadow-2xl transition-all flex items-center gap-3 sm:gap-4"
+                className="bg-gray-800/50 rounded-2xl p-4 border-2 border-emerald-500/30 hover:border-emerald-400 hover:shadow-2xl transition-all flex items-center gap-3"
               >
-                <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-400" />
+                <BookOpen className="w-7 h-7 sm:w-9 sm:h-9 text-emerald-400" />
                 <div>
-                  <h3 className="text-lg sm:text-2xl font-bold text-white mb-1 uppercase tracking-wide">
+                  <h3 className="text-base sm:text-xl font-bold text-white mb-0.5 uppercase tracking-wide">
                     Review Quizzes
                   </h3>
                   <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wider font-semibold">

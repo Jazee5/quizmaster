@@ -1,4 +1,4 @@
-// TeacherDashboard.jsx - Dark Gaming Theme
+// TeacherDashboard.jsx - Dark Gaming Theme with Fixed Scrollbar
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -338,16 +338,16 @@ useEffect(() => {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen py-8 bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 relative overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="min-h-screen py-8 bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 relative">
+        {/* Animated Background - FIXED positioning */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
           <div className="absolute top-20 left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
           <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
         </div>
 
-        {/* Scanline Effect */}
-        <div className="absolute inset-0 pointer-events-none opacity-5">
+        {/* Scanline Effect - FIXED positioning */}
+        <div className="fixed inset-0 pointer-events-none opacity-5 -z-10">
           <div className="absolute inset-0" style={{
             backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
           }}></div>
@@ -547,10 +547,7 @@ useEffect(() => {
                   <Users className="w-4 h-4 text-green-400" />
                   {quiz.total_attempts || 0} attempts
                 </div>
-                <div className="flex items-center gap-1 font-semibold uppercase tracking-wider">
-                  <Clock className="w-4 h-4 text-cyan-400" />
-                  {quiz.time_limit} mins
-                </div>
+                
               </div>
 
               <button
@@ -568,7 +565,6 @@ useEffect(() => {
 </div>
           </div>
       </div>
-
       {/* Single Quiz Results Modal */}
       {showResultsModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -636,28 +632,39 @@ useEffect(() => {
         </div>
       )}
 
-      {/* All Results Modal */}
-{showAllResultsModal && (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-    <div className="bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-full sm:max-w-5xl p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border-2 border-orange-500/30">
+  {showAllResultsModal && (
+  <div
+    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
+    onClick={closeAllResultsModal} // closes modal on backdrop click
+  >
+    <div
+      className="bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-full sm:max-w-5xl p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border-2 border-orange-500/30 pointer-events-auto"
+      onClick={(e) => e.stopPropagation()} // stops click inside modal from closing it
+    >
+      {/* Close Button */}
       <button
         onClick={closeAllResultsModal}
-        className="absolute top-3 right-3 text-gray-400 hover:text-white p-2 hover:bg-red-500/20 rounded-lg transition-all"
+        className="absolute top-0 right-3 text-gray-400 hover:text-white p-2 hover:bg-red-500/20 rounded-lg transition-all z-50"
       >
-        <X className="w-5 h-5" />
+        <X className="w-5 h-6" />
       </button>
 
+      {/* Modal Content */}
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">All Quiz Results</h2>
-            <p className="text-gray-400 uppercase tracking-wider text-sm sm:text-base">View & Filter All Attempts</p>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">
+              All Quiz Results
+            </h2>
+            <p className="text-gray-400 uppercase tracking-wider text-sm sm:text-base">
+              View & Filter All Attempts
+            </p>
           </div>
           <button
             onClick={exportResultsToCSV}
-            className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-green-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+            className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-2 sm:py-1 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-green-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3 h-3" />
             Export CSV
           </button>
         </div>
@@ -665,16 +672,7 @@ useEffect(() => {
         {/* Filters */}
         <div className="p-2 sm:p-4 bg-gray-900/50 rounded-xl border border-gray-700/50 mb-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-            <select
-              value={resultsCourseFilter}
-              onChange={(e) => setResultsCourseFilter(e.target.value)}
-              className="w-full bg-gray-800/50 border-2 border-orange-500/30 text-white rounded-xl py-2 sm:py-3 px-2 sm:px-4 focus:outline-none focus:border-orange-400 focus:shadow-lg focus:shadow-orange-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
-            >
-              <option value="">All Courses</option>
-              {courses.map(course => (
-                <option key={course} value={course}>{course}</option>
-              ))}
-            </select>
+           
 
             <select
               value={resultsSubjectFilter}
@@ -700,6 +698,7 @@ useEffect(() => {
         </div>
       </div>
 
+      {/* Table */}
       {filteredResults.length === 0 ? (
         <p className="text-center text-gray-400 italic py-6 sm:py-8 text-sm sm:text-base">
           {resultsCourseFilter || resultsSubjectFilter ? 'No results match your filters.' : 'No student attempts yet.'}
@@ -751,6 +750,7 @@ useEffect(() => {
     </div>
   </div>
 )}
+
 
     </>
   );

@@ -18,6 +18,8 @@ const CreateQuiz = () => {
     period: '',
     lesson: '',
     time_limit: 30,
+    open_time:"",
+    close_time:""
   });
 
   const [questions, setQuestions] = useState([
@@ -226,6 +228,13 @@ const CreateQuiz = () => {
       return false;
     }
 
+    if (quizData.open_time && quizData.close_time) {
+  if (new Date(quizData.close_time) <= new Date(quizData.open_time)) {
+    setError('Close time must be after open time');
+    return false;
+  }
+}
+
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
       if (!q.question_text.trim()) {
@@ -277,6 +286,8 @@ const CreateQuiz = () => {
           period: quizData.period,
           lesson: quizData.lesson,
           time_limit: parseInt(quizData.time_limit),
+          open_time: quizData.open_time || null,  // 
+          close_time: quizData.close_time || null, 
         }])
         .select("id")
         .single();
@@ -438,21 +449,21 @@ const CreateQuiz = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="min-h-screen py-4 sm:py-8 bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 relative overflow-hidden">
-        {/* Animated Background - Hidden on very small screens for performance */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none hidden sm:block">
-          <div className="absolute top-20 left-20 w-64 sm:w-96 h-64 sm:h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-64 sm:w-96 h-64 sm:h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-64 sm:w-96 h-64 sm:h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+       <Navbar />
+    <div className="min-h-screen py-8 bg-gradient-to-br from-gray-900 via-indigo-900 to-gray-900 relative">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-20 left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
 
-        {/* Scanline Effect - Reduced opacity on mobile */}
-        <div className="absolute inset-0 pointer-events-none opacity-3 sm:opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
-          }}></div>
-        </div>
+      {/* Scanline Effect */}
+      <div className="fixed inset-0 pointer-events-none opacity-5 -z-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
+        }}></div>
+      </div>
 
         <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative z-10">
           <div className="mb-4 sm:mb-8">
@@ -596,25 +607,39 @@ const CreateQuiz = () => {
                     />
                   </div>
 
+                  
                   <div>
                     <label className="block text-xs sm:text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-1 sm:gap-2">
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-cyan-400 flex-shrink-0" />
-                      <span>Time Limit (minutes)</span>
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
+                      <span>Opens At</span>
                     </label>
                     <input
-                      type="number"
-                      name="time_limit"
-                      value={quizData.time_limit}
+                      type="datetime-local"
+                      name="open_time"
+                      value={quizData.open_time || ''}
                       onChange={handleQuizDataChange}
-                      className="w-full bg-gray-800/50 border-2 border-cyan-500/30 text-white text-sm sm:text-base rounded-xl py-2.5 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-500/20 transition-all font-semibold"
-                      min="1"
-                      max="180"
-                      required
+                      className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white text-sm sm:text-base rounded-xl py-2.5 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs sm:text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-1 sm:gap-2">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />
+                      <span>Closes At</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      name="close_time"
+                      value={quizData.close_time || ''}
+                      onChange={handleQuizDataChange}
+                      min={quizData.open_time || ''}
+                      className="w-full bg-gray-800/50 border-2 border-red-500/30 text-white text-sm sm:text-base rounded-xl py-2.5 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-red-400 focus:shadow-lg focus:shadow-red-500/20 transition-all font-semibold"
                     />
                   </div>
                 </div>
               </div>
             </div>
+
 
             {/* Questions */}
             <div className="bg-gray-800/50 backdrop-blur-xl rounded-xl sm:rounded-2xl border-2 border-purple-500/30 p-4 sm:p-6 shadow-2xl relative overflow-hidden">

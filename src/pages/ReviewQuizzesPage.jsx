@@ -28,8 +28,26 @@ const ReviewQuizzesPage = () => {
     filterQuizzes();
   }, [searchTerm, selectedCourse, selectedSubject, quizzes]);
 
-  const fetchQuizzesForReview = async () => {
+ const fetchQuizzesForReview = async () => {
     try {
+      // First, get all quiz scores for the current user
+      const { data: scores, error: scoresError } = await supabase
+        .from('scores')
+        .select('quiz_id')
+        .eq('user_id', user.id);
+
+      if (scoresError) throw scoresError;
+
+      // Get unique quiz IDs that the user has attempted
+      const attemptedQuizIds = [...new Set(scores?.map(s => s.quiz_id) || [])];
+
+      if (attemptedQuizIds.length === 0) {
+        setQuizzes([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch only the quizzes that have been attempted
       const { data, error } = await supabase
         .from('quizzes')
         .select(`
@@ -42,6 +60,7 @@ const ReviewQuizzesPage = () => {
           created_at,
           questions(count)
         `)
+        .in('id', attemptedQuizIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -124,7 +143,7 @@ const ReviewQuizzesPage = () => {
             <div className="flex items-center gap-2 mb-4">
               <Filter className="w-5 h-5 text-purple-400" />
               <h2 className="text-lg font-semibold text-purple-300">Filters</h2>
-              {(searchTerm || selectedCourse || selectedSubject) && (
+              {(  selectedSubject) && (
                 <button
                   onClick={clearFilters}
                   className="ml-auto text-sm text-red-400 hover:text-red-300 font-medium flex items-center gap-1"
@@ -136,27 +155,9 @@ const ReviewQuizzesPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search quizzes..."
-                  className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg py-2 pl-10 pr-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                />
-              </div>
+             
 
-              <select
-                value={selectedCourse}
-                onChange={(e) => setSelectedCourse(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg py-2 px-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-              >
-                <option value="">All Courses</option>
-                {courses.map(course => (
-                  <option key={course} value={course}>{course}</option>
-                ))}
-              </select>
+            
 
               <select
                 value={selectedSubject}
