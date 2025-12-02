@@ -1,9 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
-import Logo from "../assets/logo.png";
-import bgVideo from "../assets/bg-video.mp4";
+import bgVideo from "../assets/video.mp4";
 
 export default function Landing() {
 
