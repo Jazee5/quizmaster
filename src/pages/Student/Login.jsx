@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, Mail, Lock, AlertCircle, Zap } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Zap, ArrowLeftRight } from 'lucide-react';
 import { supabase } from '../../config/supabaseClient';
 
 const Login = () => {
@@ -125,14 +125,14 @@ const Login = () => {
               </div>
             )}
 
-            {/* SINGLE TOGGLE BUTTON */}
+            {/* SIMPLE TOGGLE BUTTON */}
             <div className="mb-3 flex justify-end">
               <button
                 type="button"
                 onClick={() => navigate('/teacher-login')}
-                className="w-auto bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 text-white text-xs font-bold py-2 px-4 rounded-lg uppercase tracking-wider hover:scale-105 transition-all"
+                className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-600/50 text-cyan-300 text-xs font-bold py-2 px-4 rounded-lg uppercase tracking-wider hover:scale-105 transition-all border border-cyan-500/30"
               >
-                Student
+                <ArrowLeftRight className="w-4 h-4" />
               </button>
             </div>
 
