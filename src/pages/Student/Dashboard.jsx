@@ -26,7 +26,6 @@ const Dashboard = () => {
     // Remove all numbers from the username
     const nameOnly = username.replace(/[0-9]/g, '');
     
-    // Add space before capital letters (for camelCase like "richardAgbonisa")
     // or split at a reasonable point if all lowercase
     let formattedName = nameOnly.replace(/([a-z])([A-Z])/g, '$1 $2');
     

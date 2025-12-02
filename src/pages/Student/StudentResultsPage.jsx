@@ -148,7 +148,7 @@ const StudentResultsPage = () => {
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-2 drop-shadow-lg">
-              MY QUIZ RESULTS 📊
+              MY QUIZ RESULTS 
             </h1>
             <p className="text-gray-300 text-lg font-semibold uppercase tracking-wide">
               Track Your Performance & Review Past Quizzes
