@@ -16,6 +16,29 @@ const Dashboard = () => {
   const [joinError, setJoinError] = useState('');
   const [joiningQuiz, setJoiningQuiz] = useState(false);
 
+  // Helper function to extract name from email
+  const extractNameFromEmail = (email) => {
+    if (!email) return 'STUDENT';
+    
+    // Get the part before @
+    const username = email.split('@')[0];
+    
+    // Remove all numbers from the username
+    const nameOnly = username.replace(/[0-9]/g, '');
+    
+    // Add space before capital letters (for camelCase like "richardAgbonisa")
+    // or split at a reasonable point if all lowercase
+    let formattedName = nameOnly.replace(/([a-z])([A-Z])/g, '$1 $2');
+    
+    // This assumes first name + last name pattern
+    if (!formattedName.includes(' ') && formattedName.length > 6) {
+      const midPoint = Math.floor(formattedName.length / 2);
+      formattedName = formattedName.slice(0, midPoint) + ' ' + formattedName.slice(midPoint);
+    }
+    
+    return formattedName.toUpperCase();
+  };
+
   useEffect(() => {
     if (user?.id) fetchDashboardData();
   }, [user]);
@@ -122,7 +145,7 @@ const Dashboard = () => {
           {/* Welcome */}
           <section className="animate-fade-in text-center sm:text-left">
             <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-1 drop-shadow-lg break-words">
-              WELCOME BACK, {user?.user_metadata?.username?.toUpperCase() || user?.email?.split('@')[0]?.toUpperCase()} 👋
+              WELCOME BACK, {extractNameFromEmail(user?.email)} 👋
             </h1>
             <p className="text-gray-300 text-xs sm:text-sm md:text-base font-semibold uppercase tracking-wide">
               Ready to Dominate the Leaderboard?
@@ -203,8 +226,6 @@ const Dashboard = () => {
               Quick Actions
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-             
-
               <Link
                 to="/review-quizzes"
                 className="bg-gray-800/50 rounded-2xl p-4 border-2 border-emerald-500/30 hover:border-emerald-400 hover:shadow-2xl transition-all flex items-center gap-3"

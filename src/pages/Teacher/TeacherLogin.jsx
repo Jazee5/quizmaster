@@ -73,48 +73,89 @@ const TeacherLogin = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  // Replace the handleSubmit function in TeacherLogin.jsx with this:
 
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      setLoading(false);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setLoading(true);
+
+  if (!email || !password) {
+    setError('Please fill in all fields');
+    setLoading(false);
+    return;
+  }
+
+  try {
+    // Try to sign in first
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.toLowerCase(),
+      password,
+    });
+
+    // If sign in succeeds
+    if (signInData?.user && !signInError) {
+      await handleProfileUpsert(signInData.user);
+      navigate('/teacher-dashboard');
       return;
     }
 
-    try {
-      // Sign in or create account
-      let { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // If sign in fails, check if it's because user doesn't exist
+    if (signInError) {
+      console.log('Sign in error:', signInError.message);
 
-      if (signInError) {
-        // If user doesn't exist, create account
-        if (signInError.message.includes('Invalid login credentials')) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
+      // Only try to sign up if error indicates invalid credentials
+      if (signInError.message.includes('Invalid login credentials')) {
+        
+        // Try to sign up (this will fail if user exists with wrong password)
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: email.toLowerCase(),
+          password,
+          options: {
+            data: {
+              role: 'teacher'
+            }
+          }
+        });
+
+        // If signup succeeds, user was new
+        if (signUpData?.user && !signUpError) {
+          // Create profile for new teacher
+          await supabase.from('profiles').insert({
+            id: signUpData.user.id,
+            email: signUpData.user.email,
+            username: signUpData.user.email.split('@')[0],
+            full_name: signUpData.user.email.split('@')[0],
+            role: 'teacher',
           });
-          if (signUpError) throw signUpError;
-          data = signUpData;
-        } else {
-          throw signInError;
-        }
-      }
 
-      if (data.user) {
-        await handleProfileUpsert(data.user);
-        navigate('/teacher-dashboard');
+          navigate('/teacher-dashboard');
+          return;
+        }
+
+        // If signup fails with "already registered", it means wrong password
+        if (signUpError && signUpError.message.includes('User already registered')) {
+          setError('❌ Incorrect password. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Other signup errors
+        if (signUpError) {
+          throw signUpError;
+        }
+      } else {
+        // Other sign in errors (not invalid credentials)
+        throw signInError;
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error('Teacher login error:', err);
+    setError(err.message || 'Failed to sign in. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-4 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 relative">

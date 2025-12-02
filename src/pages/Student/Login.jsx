@@ -1,4 +1,4 @@
-// src/pages/Login.jsx - CAMPUS GMAIL VERSION
+// src/pages/Login.jsx - FIXED VERSION
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -6,14 +6,13 @@ import { LogIn, Mail, Lock, AlertCircle, Zap, ArrowLeftRight } from 'lucide-reac
 import { supabase } from '../../config/supabaseClient';
 
 const Login = () => {
-  const [email, setEmail] = useState(''); // Full Gmail now
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  // Regex to allow full student Gmail with letters, numbers, dots or underscores
   const studentEmailPattern = /^(?=.*\d)[a-zA-Z0-9._]+@gmail\.com$/;
 
   useEffect(() => {
@@ -76,13 +75,77 @@ const Login = () => {
       return;
     }
 
-    const { error: signInError } = await signIn(email.toLowerCase(), password, 'student');
+    try {
+      const normalizedEmail = email.toLowerCase();
 
-    if (signInError) {
-      setError(signInError.message);
+      // Step 1: Try to sign in
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      // If sign in is successful, navigate to dashboard
+      if (signInData?.user && !signInError) {
+        navigate('/dashboard');
+        return;
+      }
+
+      // Step 2: If sign in fails, try to sign up (might be a new user)
+      if (signInError) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: {
+              role: 'student'
+            }
+          }
+        });
+
+        // Check if signup was successful
+        if (signUpData?.user && !signUpError) {
+          // Check if this is a truly new user or existing user
+          // signUpData.user.identities will be empty array if user already exists
+          if (signUpData.user.identities && signUpData.user.identities.length === 0) {
+            // User already exists - wrong password
+            setError('❌ Incorrect password. Please try again.');
+            setLoading(false);
+            return;
+          }
+
+          // This is a new user - create profile
+          try {
+            await supabase.from('profiles').insert({
+              id: signUpData.user.id,
+              email: signUpData.user.email,
+              full_name: signUpData.user.email.split('@')[0],
+              role: 'student',
+            });
+          } catch (profileError) {
+            console.error('Profile creation error:', profileError);
+            // Continue anyway - profile will be created by useEffect
+          }
+
+          navigate('/dashboard');
+          return;
+        }
+
+        // If signup also failed, show appropriate error
+        if (signUpError) {
+          if (signUpError.message.includes('already registered')) {
+            setError('❌ Incorrect password. Please try again.');
+          } else {
+            setError(signUpError.message);
+          }
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to sign in. Please try again.');
+    } finally {
       setLoading(false);
-    } else {
-      navigate('/dashboard');
     }
   };
 
