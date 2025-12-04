@@ -1,4 +1,3 @@
-// TeacherDashboard.jsx - Dark Gaming Theme with Fixed Scrollbar (Part 1)
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
