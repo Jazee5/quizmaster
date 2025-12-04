@@ -2,6 +2,45 @@
 
 @import "tailwindcss";
 
+/* ========================================
+   MOBILE OPTIMIZATIONS - Prevent Zoom Issues
+   ======================================== */
+
+/* Prevent automatic zoom on input focus (iOS Safari fix) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+textarea,
+select {
+  font-size: 16px !important; /* iOS won't zoom if font-size >= 16px */
+}
+
+/* Prevent text size adjustments on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Prevent zoom on double-tap */
+* {
+  touch-action: manipulation;
+}
+
+/* Ensure proper mobile viewport behavior */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+}
+
+/* ======================================== */
+
 /* Ensure html and body allow scrolling */
 html, body, #root {
   overflow-x: hidden;
@@ -14,6 +53,7 @@ html, body, #root {
     font-family: 'Inter', sans-serif;
   }
 }
+
 
 /* Custom animations */
 @keyframes float {
