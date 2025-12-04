@@ -1,4 +1,4 @@
-// TeacherDashboard.jsx - Dark Gaming Theme with Fixed Scrollbar
+// TeacherDashboard.jsx - Dark Gaming Theme with Fixed Scrollbar (Part 1)
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -24,7 +24,7 @@ import {
 import Navbar from '../../components/Navbar';
 
 const TeacherDashboard = () => {
-  const { user,  loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState([]);
@@ -36,43 +36,57 @@ const TeacherDashboard = () => {
   const [quizResults, setQuizResults] = useState([]);
   
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('');
-  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('');
+  const [selectedLessonFilter, setSelectedLessonFilter] = useState('');
   const [courses, setCourses] = useState([]);
-  const [subjects, setSubjects] = useState([]);
+  const [lessons, setLessons] = useState([]);
   
   const [showAllResultsModal, setShowAllResultsModal] = useState(false);
   const [allResults, setAllResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [resultsCourseFilter, setResultsCourseFilter] = useState('');
-  const [resultsSubjectFilter, setResultsSubjectFilter] = useState('');
+  const [resultsLessonFilter, setResultsLessonFilter] = useState('');
 
-useEffect(() => {
-  if (user?.id) {
-    fetchTeacherData(); 
-  }
-}, [user]);
+  useEffect(() => {
+    if (user?.id) {
+      fetchTeacherData(); 
+    }
+  }, [user]);
 
   useEffect(() => {
     filterQuizzes();
-  }, [selectedCourseFilter, selectedSubjectFilter, quizzes]);
+  }, [selectedCourseFilter, selectedLessonFilter, quizzes]);
   
   useEffect(() => {
     filterResults();
-  }, [resultsCourseFilter, resultsSubjectFilter, allResults]);
+  }, [resultsCourseFilter, resultsLessonFilter, allResults]);
 
   const fetchTeacherData = async () => {
     try {
-      
+      // Fetch quizzes with lesson, course, and department information
       const { data: quizzesData, error: quizzesError } = await supabase
         .from('quizzes')
         .select(`
           id,
           title,
-          subject,
-          course,
+          lesson_id,
           time_limit,
           created_at,
           quiz_code,
+          lessons (
+            id,
+            lesson_name,
+            course_id,
+            courses (
+              id,
+              course_name,
+              subject,
+              department_id,
+              departments (
+                id,
+                name
+              )
+            )
+          ),
           questions(count),
           scores (
             id,
@@ -96,9 +110,15 @@ useEffect(() => {
         return;
       }
 
+      // Transform the data to include course and subject info
       const quizzesWithAttempts = quizzesData.map((quiz) => ({
         ...quiz,
-        total_attempts: quiz.scores?.length || 0
+        total_attempts: quiz.scores?.length || 0,
+        lesson_name: quiz.lessons?.lesson_name || 'No Lesson',
+        course_name: quiz.lessons?.courses?.course_name || 'No Course',
+        subject: quiz.lessons?.courses?.subject || 'No Subject',
+        department_name: quiz.lessons?.courses?.departments?.name || 'No Department',
+        course_id: quiz.lessons?.courses?.id || null
       }));
 
       const totalAttempts = quizzesWithAttempts.reduce(
@@ -114,10 +134,11 @@ useEffect(() => {
       setQuizzes(quizzesWithAttempts);
       setFilteredQuizzes(quizzesWithAttempts);
 
-      const uniqueCourses = [...new Set(quizzesWithAttempts.map(q => q.course).filter(Boolean))];
-      const uniqueSubjects = [...new Set(quizzesWithAttempts.map(q => q.subject).filter(Boolean))];
+      // Get unique courses and lessons
+      const uniqueCourses = [...new Set(quizzesWithAttempts.map(q => q.course_name).filter(Boolean))];
+      const uniqueLessons = [...new Set(quizzesWithAttempts.map(q => q.lesson_name).filter(Boolean))];
       setCourses(uniqueCourses);
-      setSubjects(uniqueSubjects);
+      setLessons(uniqueLessons);
 
     } catch (error) {
       console.error('Error fetching teacher data:', error);
@@ -128,11 +149,11 @@ useEffect(() => {
     let filtered = [...quizzes];
 
     if (selectedCourseFilter) {
-      filtered = filtered.filter(quiz => quiz.course === selectedCourseFilter);
+      filtered = filtered.filter(quiz => quiz.course_name === selectedCourseFilter);
     }
 
-    if (selectedSubjectFilter) {
-      filtered = filtered.filter(quiz => quiz.subject === selectedSubjectFilter);
+    if (selectedLessonFilter) {
+      filtered = filtered.filter(quiz => quiz.lesson_name === selectedLessonFilter);
     }
 
     setFilteredQuizzes(filtered);
@@ -145,8 +166,8 @@ useEffect(() => {
       filtered = filtered.filter(result => result.quiz_course === resultsCourseFilter);
     }
 
-    if (resultsSubjectFilter) {
-      filtered = filtered.filter(result => result.quiz_subject === resultsSubjectFilter);
+    if (resultsLessonFilter) {
+      filtered = filtered.filter(result => result.quiz_lesson === resultsLessonFilter);
     }
 
     setFilteredResults(filtered);
@@ -154,12 +175,12 @@ useEffect(() => {
 
   const clearQuizFilters = () => {
     setSelectedCourseFilter('');
-    setSelectedSubjectFilter('');
+    setSelectedLessonFilter('');
   };
 
   const clearResultsFilters = () => {
     setResultsCourseFilter('');
-    setResultsSubjectFilter('');
+    setResultsLessonFilter('');
   };
 
   const handleDeleteQuiz = async (quizId) => {
@@ -258,7 +279,18 @@ useEffect(() => {
         const quizIds = [...new Set(scoresData.map(s => s.quiz_id))];
         const { data: quizzesData, error: quizzesError } = await supabase
           .from('quizzes')
-          .select('id, title, course, subject')
+          .select(`
+            id,
+            title,
+            lesson_id,
+            lessons (
+              lesson_name,
+              courses (
+                course_name,
+                subject
+              )
+            )
+          `)
           .in('id', quizIds);
 
         if (quizzesError) {
@@ -280,8 +312,9 @@ useEffect(() => {
             quizzes: quiz,
             display_name,
             quiz_title: quiz?.title || 'Unknown Quiz',
-            quiz_course: quiz?.course || '',
-            quiz_subject: quiz?.subject || ''
+            quiz_course: quiz?.lessons?.courses?.course_name || '',
+            quiz_lesson: quiz?.lessons?.lesson_name || '',
+            quiz_subject: quiz?.lessons?.courses?.subject || ''
           };
         });
 
@@ -297,12 +330,13 @@ useEffect(() => {
   };
 
   const exportResultsToCSV = () => {
-    const headers = ['Student Name', 'Quiz Title', 'Course', 'Subject', 'Score', 'Percentage', 'Date'];
+    const headers = ['Student Name', 'Quiz Title', 'Course', 'Lesson', 'Subject', 'Score', 'Percentage', 'Date'];
     
     const rows = filteredResults.map(result => [
       result.display_name,
       result.quiz_title,
       result.quiz_course,
+      result.quiz_lesson,
       result.quiz_subject,
       `${result.score}/${result.total_questions}`,
       `${Math.round((result.score / result.total_questions) * 100)}%`,
@@ -334,6 +368,7 @@ useEffect(() => {
     setFilteredResults([]);
     clearResultsFilters();
   };
+  // TeacherDashboard.jsx - Part 2 (Continuation)
 
   return (
     <>
@@ -357,7 +392,7 @@ useEffect(() => {
           {/* Welcome Section */}
           <div className="mb-8 animate-fade-in">
             <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-2 drop-shadow-lg">
-              WELCOME, Professor {user.user_metadata?.full_name || user.email?.split('@')[0].toUpperCase()}! 
+              WELCOME, Professor {user?.user_metadata?.full_name || user?.email?.split('@')[0].toUpperCase()}! 
             </h1>
             <p className="text-gray-300 text-lg font-semibold uppercase tracking-wide">
               Manage Quizzes & Track Performance
@@ -426,146 +461,146 @@ useEffect(() => {
             </button>
           </div>
 
-{/* My Quizzes with Filters */}
-<div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border-2 border-indigo-500/30 p-4 sm:p-6 shadow-2xl mb-8 relative overflow-hidden">
-  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"></div>
+          {/* My Quizzes with Filters */}
+          <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border-2 border-indigo-500/30 p-4 sm:p-6 shadow-2xl mb-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"></div>
 
-  <div className="relative z-10">
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
-      <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">My Quizzes</h2>
-      <Filter className="w-6 h-6 text-indigo-400" />
-    </div>
-
-    {/* Filters */}
-    <div className="mb-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700/50">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <select
-          value={selectedCourseFilter}
-          onChange={(e) => setSelectedCourseFilter(e.target.value)}
-          className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
-        >
-          <option value="">All Courses</option>
-          {courses.map(course => (
-            <option key={course} value={course}>{course}</option>
-          ))}
-        </select>
-
-        <select
-          value={selectedSubjectFilter}
-          onChange={(e) => setSelectedSubjectFilter(e.target.value)}
-          className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
-        >
-          <option value="">All Subjects</option>
-          {subjects.map(subject => (
-            <option key={subject} value={subject}>{subject}</option>
-          ))}
-        </select>
-
-        {(selectedCourseFilter || selectedSubjectFilter) && (
-          <button
-            onClick={clearQuizFilters}
-            className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-red-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
-          >
-            <X className="w-4 h-4" />
-            Clear Filters
-          </button>
-        )}
-      </div>
-    </div>
-
-    {/* No Quizzes */}
-    {filteredQuizzes.length === 0 ? (
-      <div className="text-center py-12 sm:py-16">
-        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-2xl shadow-blue-500/50">
-          <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-        </div>
-        <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 uppercase tracking-wide">
-          {selectedCourseFilter || selectedSubjectFilter ? 'No Quizzes Match Filters' : 'No Quizzes Yet'}
-        </h3>
-        <p className="text-gray-400 mb-4 sm:mb-6 uppercase tracking-wider text-sm sm:text-base">
-          {selectedCourseFilter || selectedSubjectFilter ? 'Try Adjusting Filters' : 'Create Your First Quiz!'}
-        </p>
-        {!selectedCourseFilter && !selectedSubjectFilter && (
-          <Link to="/create-quiz" className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base">
-            <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-            Create Quiz
-          </Link>
-        )}
-      </div>
-    ) : (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredQuizzes.map((quiz) => (
-          <div
-            key={quiz.id}
-            className="bg-gray-900/50 border-2 border-indigo-500/30 rounded-2xl p-4 sm:p-5 hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-400/50 transition-all relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            
             <div className="relative z-10">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2 sm:gap-0">
-                <div>
-                  <h3 className="font-bold text-white text-lg sm:text-base uppercase tracking-wide">{quiz.title}</h3>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <Hash className="w-4 h-4 text-blue-400" />
-                    <span className="font-mono text-xs sm:text-sm text-blue-300 font-bold tracking-wider">{quiz.quiz_code}</span>
-                    <button onClick={() => copyQuizCode(quiz.quiz_code)}>
-                      {copiedCode === quiz.quiz_code ? (
-                        <CheckCircle className="w-4 h-4 text-green-400" />
-                      ) : (
-                        <Copy className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors" />
-                      )}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4 sm:gap-0">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">My Quizzes</h2>
+                <Filter className="w-6 h-6 text-indigo-400" />
+              </div>
+
+              {/* Filters */}
+              <div className="mb-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700/50">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <select
+                    value={selectedCourseFilter}
+                    onChange={(e) => setSelectedCourseFilter(e.target.value)}
+                    className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
+                  >
+                    <option value="">All Courses</option>
+                    {courses.map(course => (
+                      <option key={course} value={course}>{course}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={selectedLessonFilter}
+                    onChange={(e) => setSelectedLessonFilter(e.target.value)}
+                    className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
+                  >
+                    <option value="">All Lessons</option>
+                    {lessons.map(lesson => (
+                      <option key={lesson} value={lesson}>{lesson}</option>
+                    ))}
+                  </select>
+
+                  {(selectedCourseFilter || selectedLessonFilter) && (
+                    <button
+                      onClick={clearQuizFilters}
+                      className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-red-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear Filters
                     </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <span className="bg-blue-500/20 border border-blue-500/30 text-blue-300 px-2 py-1 text-xs rounded-full font-bold uppercase tracking-wide">{quiz.course}</span>
-                    <span className="bg-purple-500/20 border border-purple-500/30 text-purple-300 px-2 py-1 text-xs rounded-full font-bold uppercase tracking-wide">{quiz.subject}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Link
-                    to={`/edit-quiz/${quiz.id}`}
-                    className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/20 rounded-lg transition-all"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => handleDeleteQuiz(quiz.id)}
-                    className="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/20 rounded-lg transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-between text-xs sm:text-sm text-gray-400 mb-3 bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-gray-700/50 gap-2 sm:gap-0">
-                <div className="flex items-center gap-1 font-semibold uppercase tracking-wider">
-                  <BookOpen className="w-4 h-4 text-indigo-400" />
-                  {quiz.questions?.[0]?.count || 0} questions
+              {/* No Quizzes */}
+              {filteredQuizzes.length === 0 ? (
+                <div className="text-center py-12 sm:py-16">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-2xl shadow-blue-500/50">
+                    <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 uppercase tracking-wide">
+                    {selectedCourseFilter || selectedLessonFilter ? 'No Quizzes Match Filters' : 'No Quizzes Yet'}
+                  </h3>
+                  <p className="text-gray-400 mb-4 sm:mb-6 uppercase tracking-wider text-sm sm:text-base">
+                    {selectedCourseFilter || selectedLessonFilter ? 'Try Adjusting Filters' : 'Create Your First Quiz!'}
+                  </p>
+                  {!selectedCourseFilter && !selectedLessonFilter && (
+                    <Link to="/create-quiz" className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base">
+                      <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      Create Quiz
+                    </Link>
+                  )}
                 </div>
-                <div className="flex items-center gap-1 font-semibold uppercase tracking-wider">
-                  <Users className="w-4 h-4 text-green-400" />
-                  {quiz.total_attempts || 0} attempts
-                </div>
-                
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {filteredQuizzes.map((quiz) => (
+                    <div
+                      key={quiz.id}
+                      className="bg-gray-900/50 border-2 border-indigo-500/30 rounded-2xl p-4 sm:p-5 hover:shadow-2xl hover:shadow-indigo-500/20 hover:border-indigo-400/50 transition-all relative overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                      
+                      <div className="relative z-10">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2 sm:gap-0">
+                          <div>
+                            <h3 className="font-bold text-white text-lg sm:text-base uppercase tracking-wide">{quiz.title}</h3>
+                            <div className="flex items-center gap-2 mt-2 flex-wrap">
+                              <Hash className="w-4 h-4 text-blue-400" />
+                              <span className="font-mono text-xs sm:text-sm text-blue-300 font-bold tracking-wider">{quiz.quiz_code}</span>
+                              <button onClick={() => copyQuizCode(quiz.quiz_code)}>
+                                {copiedCode === quiz.quiz_code ? (
+                                  <CheckCircle className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors" />
+                                )}
+                              </button>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="bg-blue-500/20 border border-blue-500/30 text-blue-300 px-2 py-1 text-xs rounded-full font-bold uppercase tracking-wide">{quiz.course_name}</span>
+                              <span className="bg-purple-500/20 border border-purple-500/30 text-purple-300 px-2 py-1 text-xs rounded-full font-bold uppercase tracking-wide">{quiz.lesson_name}</span>
+                            </div>
+                          </div>
 
-              <button
-                onClick={() => handleViewResults(quiz)}
-                className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
-              >
-                <Eye className="w-4 h-4" /> View Results
-              </button>
+                          <div className="flex gap-2">
+                            <Link
+                              to={`/edit-quiz/${quiz.id}`}
+                              className="text-blue-400 hover:text-blue-300 p-2 hover:bg-blue-500/20 rounded-lg transition-all"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteQuiz(quiz.id)}
+                              className="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/20 rounded-lg transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-between text-xs sm:text-sm text-gray-400 mb-3 bg-gray-800/50 rounded-lg p-2 sm:p-3 border border-gray-700/50 gap-2 sm:gap-0">
+                          <div className="flex items-center gap-1 font-semibold uppercase tracking-wider">
+                            <BookOpen className="w-4 h-4 text-indigo-400" />
+                            {quiz.questions?.[0]?.count || 0} questions
+                          </div>
+                          <div className="flex items-center gap-1 font-semibold uppercase tracking-wider">
+                            <Users className="w-4 h-4 text-green-400" />
+                            {quiz.total_attempts || 0} attempts
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleViewResults(quiz)}
+                          className="w-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-indigo-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+                        >
+                          <Eye className="w-4 h-4" /> View Results
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        ))}
+        </div>
       </div>
-    )}
-  </div>
-</div>
-          </div>
-      </div>
-      
+      // TeacherDashboard.jsx - Part 3 (Final - Modals)
+
       {/* Single Quiz Results Modal */}
       {showResultsModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -580,7 +615,7 @@ useEffect(() => {
             <div className="text-center mb-6">
               <Trophy className="w-10 h-10 text-yellow-400 mx-auto mb-2" />
               <h2 className="text-3xl font-bold text-white uppercase tracking-wide">{selectedQuiz.title}</h2>
-              <p className="text-gray-400 uppercase tracking-wider">{selectedQuiz.subject}</p>
+              <p className="text-gray-400 uppercase tracking-wider">{selectedQuiz.lesson_name} - {selectedQuiz.subject}</p>
             </div>
 
             {quizResults.length === 0 ? (
@@ -590,6 +625,7 @@ useEffect(() => {
                 <table className="w-full border-2 border-gray-700">
                   <thead className="bg-gradient-to-r from-indigo-600 to-blue-600">
                     <tr>
+                      <th className="py-3 px-4 text-left text-white font-bold uppercase tracking-wider">Student</th>
                       <th className="py-3 px-4 text-left text-white font-bold uppercase tracking-wider">Score</th>
                       <th className="py-3 px-4 text-left text-white font-bold uppercase tracking-wider">Accuracy</th>
                       <th className="py-3 px-4 text-left text-white font-bold uppercase tracking-wider">Date</th>
@@ -633,125 +669,152 @@ useEffect(() => {
         </div>
       )}
 
-  {showAllResultsModal && (
-  <div
-    className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
-    onClick={closeAllResultsModal} 
-  >
-    <div
-      className="bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-full sm:max-w-5xl p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border-2 border-orange-500/30 pointer-events-auto"
-      onClick={(e) => e.stopPropagation()} 
-    >
-      {/* Close Button */}
-      <button
-        onClick={closeAllResultsModal}
-        className="absolute top-0 right-3 text-gray-400 hover:text-white p-2 hover:bg-red-500/20 rounded-lg transition-all z-50"
-      >
-        <X className="w-5 h-6" />
-      </button>
-
-      {/* Modal Content */}
-      <div className="mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">
-              All Quiz Results
-            </h2>
-            <p className="text-gray-400 uppercase tracking-wider text-sm sm:text-base">
-              View & Filter All Attempts
-            </p>
-          </div>
-          <button
-            onClick={exportResultsToCSV}
-            className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-2 sm:py-1 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-green-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+      {/* All Results Modal */}
+      {showAllResultsModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
+          onClick={closeAllResultsModal} 
+        >
+          <div
+            className="bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-full sm:max-w-5xl p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto border-2 border-orange-500/30 pointer-events-auto"
+            onClick={(e) => e.stopPropagation()} 
           >
-            <Download className="w-3 h-3" />
-            Export CSV
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div className="p-2 sm:p-4 bg-gray-900/50 rounded-xl border border-gray-700/50 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-           
-
-            <select
-              value={resultsSubjectFilter}
-              onChange={(e) => setResultsSubjectFilter(e.target.value)}
-              className="w-full bg-gray-800/50 border-2 border-orange-500/30 text-white rounded-xl py-2 sm:py-3 px-2 sm:px-4 focus:outline-none focus:border-orange-400 focus:shadow-lg focus:shadow-orange-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
+            {/* Close Button */}
+            <button
+              onClick={closeAllResultsModal}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white p-2 hover:bg-red-500/20 rounded-lg transition-all z-50"
             >
-              <option value="">All Subjects</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
+              <X className="w-5 h-5" />
+            </button>
 
-            {(resultsCourseFilter || resultsSubjectFilter) && (
-              <button
-                onClick={clearResultsFilters}
-                className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-red-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
-              >
-                <X className="w-4 h-4" />
-                Clear Filters
-              </button>
+            {/* Modal Content */}
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 mb-4">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-white uppercase tracking-wide">
+                    All Quiz Results
+                  </h2>
+                  <p className="text-gray-400 uppercase tracking-wider text-sm sm:text-base">
+                    View & Filter All Attempts
+                  </p>
+                </div>
+                <button
+                  onClick={exportResultsToCSV}
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-green-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+                >
+                  <Download className="w-4 h-4" />
+                  Export CSV
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="p-2 sm:p-4 bg-gray-900/50 rounded-xl border border-gray-700/50 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+                  <select
+                    value={resultsCourseFilter}
+                    onChange={(e) => setResultsCourseFilter(e.target.value)}
+                    className="w-full bg-gray-800/50 border-2 border-orange-500/30 text-white rounded-xl py-2 sm:py-3 px-2 sm:px-4 focus:outline-none focus:border-orange-400 focus:shadow-lg focus:shadow-orange-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
+                  >
+                    <option value="">All Courses</option>
+                    {courses.map(course => (
+                      <option key={course} value={course}>{course}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={resultsLessonFilter}
+                    onChange={(e) => setResultsLessonFilter(e.target.value)}
+                    className="w-full bg-gray-800/50 border-2 border-orange-500/30 text-white rounded-xl py-2 sm:py-3 px-2 sm:px-4 focus:outline-none focus:border-orange-400 focus:shadow-lg focus:shadow-orange-500/20 transition-all uppercase font-semibold text-sm sm:text-base"
+                  >
+                    <option value="">All Lessons</option>
+                    {lessons.map(lesson => (
+                      <option key={lesson} value={lesson}>{lesson}</option>
+                    ))}
+                  </select>
+
+                  {(resultsCourseFilter || resultsLessonFilter) && (
+                    <button
+                      onClick={clearResultsFilters}
+                      className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold py-2 sm:py-3 px-3 sm:px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-red-500/50 transform hover:scale-105 transition-all uppercase tracking-wider text-sm sm:text-base"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            {filteredResults.length === 0 ? (
+              <p className="text-center text-gray-400 italic py-6 sm:py-8 text-sm sm:text-base">
+                {resultsCourseFilter || resultsLessonFilter ? 'No results match your filters.' : 'No student attempts yet.'}
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-2 border-gray-700 text-xs sm:text-sm">
+                  <thead className="bg-gradient-to-r from-orange-600 to-red-600">
+                    <tr>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Student</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Quiz</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Course</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Lesson</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Subject</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-center text-white font-bold uppercase tracking-wider">Score</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-center text-white font-bold uppercase tracking-wider">%</th>
+                      <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-gray-900/50">
+                    {filteredResults.map((result) => {
+                      const accuracy = Math.round((result.score / result.total_questions) * 100);
+                      return (
+                        <tr key={result.id} className="border-b border-gray-700 hover:bg-gray-800/50 transition-colors">
+                          <td className="py-1 px-2 sm:py-2 sm:px-4 font-bold text-cyan-300 uppercase tracking-wide">
+                            {result.display_name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4 text-white font-semibold">{result.quiz_title}</td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4">
+                            <span className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs rounded-full font-bold uppercase">
+                              {result.quiz_course}
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4">
+                            <span className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs rounded-full font-bold uppercase">
+                              {result.quiz_lesson}
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4">
+                            <span className="px-2 py-1 bg-pink-500/20 border border-pink-500/30 text-pink-300 text-xs rounded-full font-bold uppercase">
+                              {result.quiz_subject}
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4 text-center font-bold text-white">
+                            {result.score}/{result.total_questions}
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4 text-center">
+                            <span className={`px-2 py-1 rounded-lg font-bold text-xs sm:text-sm ${
+                              accuracy >= 90 ? 'bg-green-500/20 text-green-400' :
+                              accuracy >= 80 ? 'bg-blue-500/20 text-blue-400' :
+                              accuracy >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-red-500/20 text-red-400'
+                            }`}>
+                              {accuracy}%
+                            </span>
+                          </td>
+                          <td className="py-1 px-2 sm:py-2 sm:px-4 text-gray-400 text-xs sm:text-sm">
+                            {new Date(result.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Table */}
-      {filteredResults.length === 0 ? (
-        <p className="text-center text-gray-400 italic py-6 sm:py-8 text-sm sm:text-base">
-          {resultsCourseFilter || resultsSubjectFilter ? 'No results match your filters.' : 'No student attempts yet.'}
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-2 border-gray-700 text-xs sm:text-sm">
-            <thead className="bg-gradient-to-r from-orange-600 to-red-600">
-              <tr>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Student</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Quiz</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Course</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Subject</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-center text-white font-bold uppercase tracking-wider">Score</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-center text-white font-bold uppercase tracking-wider">%</th>
-                <th className="py-2 px-3 sm:py-3 sm:px-4 text-left text-white font-bold uppercase tracking-wider">Date</th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-900/50">
-              {filteredResults.map((result) => {
-                const accuracy = Math.round((result.score / result.total_questions) * 100);
-                return (
-                  <tr key={result.id} className="border-b border-gray-700 hover:bg-gray-800/50 transition-colors">
-                    <td className="py-1 px-2 sm:py-2 sm:px-4 font-bold text-cyan-300 uppercase tracking-wide">{result.display_name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4 text-white font-semibold">{result.quiz_title}</td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4">
-                      <span className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs rounded-full font-bold uppercase">{result.quiz_course}</span>
-                    </td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4">
-                      <span className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs rounded-full font-bold uppercase">{result.quiz_subject}</span>
-                    </td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4 text-center font-bold text-white">{result.score}/{result.total_questions}</td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4 text-center">
-                      <span className={`px-2 py-1 rounded-lg font-bold text-xs sm:text-sm ${
-                        accuracy >= 90 ? 'bg-green-500/20 text-green-400' :
-                        accuracy >= 80 ? 'bg-blue-500/20 text-blue-400' :
-                        accuracy >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
-                      }`}>{accuracy}%</span>
-                    </td>
-                    <td className="py-1 px-2 sm:py-2 sm:px-4 text-gray-400 text-xs sm:text-sm">{new Date(result.created_at).toLocaleDateString()}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       )}
-    </div>
-  </div>
-)}
-
 
     </>
   );

@@ -1,4 +1,4 @@
-// src/pages/QuizResult.jsx
+// QuizResult.jsx - Updated for new database structure
 import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../config/supabaseClient";
@@ -36,9 +36,22 @@ const QuizResult = () => {
 
   const fetchResultData = async () => {
     try {
+      // Fetch quiz with course and lesson details
       const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
-        .select("*")
+        .select(`
+          *,
+          course:course_id (
+            id,
+            name,
+            subject
+          ),
+          lesson:lesson_id (
+            id,
+            name,
+            period
+          )
+        `)
         .eq("id", quizId)
         .single();
       if (quizError) throw quizError;
@@ -46,7 +59,7 @@ const QuizResult = () => {
       const { data: userData } = await supabase.auth.getUser();
       const user = userData?.user;
 
-      // ✅ Get latest score for this user
+      // Get latest score for this user
       const { data: scoreData, error: scoreError } = await supabase
         .from("scores")
         .select("*")
@@ -64,7 +77,7 @@ const QuizResult = () => {
         .order("created_at", { ascending: true });
       if (questionsError) throw questionsError;
 
-      // ✅ Parse JSON safely
+      // Parse JSON safely
       const parsedAnswers = typeof scoreData.answers === "string"
         ? JSON.parse(scoreData.answers)
         : scoreData.answers || {};
@@ -134,7 +147,25 @@ const QuizResult = () => {
             <h1 className="text-4xl font-extrabold mb-2 text-white drop-shadow-lg">
               {quiz?.title || "Quiz Result"}
             </h1>
-            <p className="text-gray-100 mb-4 text-lg">{quiz?.subject}</p>
+            
+            {/* Course/Subject/Period Tags */}
+            <div className="flex flex-wrap justify-center gap-2 mb-4">
+              {quiz?.course?.name && (
+                <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/50 text-blue-200 text-sm font-semibold rounded-full">
+                  {quiz.course.name}
+                </span>
+              )}
+              {quiz?.course?.subject && (
+                <span className="px-3 py-1 bg-purple-500/20 border border-purple-400/50 text-purple-200 text-sm font-semibold rounded-full">
+                  {quiz.course.subject}
+                </span>
+              )}
+              {quiz?.lesson?.period && (
+                <span className="px-3 py-1 bg-green-500/20 border border-green-400/50 text-green-200 text-sm font-semibold rounded-full">
+                  {quiz.lesson.period}
+                </span>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
               <div className="bg-gray-900/50 backdrop-blur-sm px-8 py-4 rounded-xl border border-purple-500/30 shadow-lg">

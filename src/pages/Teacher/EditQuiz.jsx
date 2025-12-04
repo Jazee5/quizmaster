@@ -1,4 +1,4 @@
-// EditQuiz.jsx - Dark Gaming Theme (Mobile-Responsive) - Supports Multiple Choice & Fill-in-the-Blank
+// EditQuiz.jsx - Updated for New Schema (Part 1)
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -13,7 +13,9 @@ import {
   Clock,
   Hash,
   AlertCircle,
-  Calendar
+  Calendar,
+  GraduationCap,
+  FileText
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 
@@ -28,45 +30,127 @@ const EditQuiz = () => {
   
   const [quizData, setQuizData] = useState({
     title: '',
-    subject: '',
-    course: '',
+    lesson_id: '',
     time_limit: 30,
     quiz_code: '',
-    open_time: '',
-    close_time: '',
+    category: '',
   });
   
   const [questions, setQuestions] = useState([]);
   const [deletedQuestions, setDeletedQuestions] = useState([]);
 
-  // Helper function to format datetime for datetime-local input
-  const formatDateTimeLocal = (isoString) => {
-    if (!isoString) return '';
-    // Just remove the timezone part and seconds for datetime-local input
-    // Keep the time as-is without conversion
-    return isoString.slice(0, 16);
-  };
+  // New state for fetched data
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [lessons, setLessons] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
+  
+  // Display info
+  const [displayInfo, setDisplayInfo] = useState({
+    departmentName: '',
+    courseName: '',
+    lessonName: '',
+    subject: '',
+  });
 
-  // Helper function to format datetime for saving (keeps Philippine time)
-  const formatForDatabase = (localDateTime) => {
-    if (!localDateTime) return null;
-    // Keep the datetime as-is, just add seconds if needed
-    // This stores the exact time you entered without timezone conversion
-    return localDateTime + ':00';
-  };
+  const questionTypes = [
+    { value: 'multiple_choice', label: 'Multiple Choice' },
+    { value: 'true_false', label: 'True/False' },
+    { value: 'fill_blank', label: 'Fill in the Blank' },
+    { value: 'identification', label: 'Identification' },
+    { value: 'essay', label: 'Essay/Short Answer' },
+  ];
 
   useEffect(() => {
     if (user?.id) {
       fetchQuizData();
+      fetchDepartments();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    if (selectedDepartment) {
+      fetchCourses(selectedDepartment);
+    }
+  }, [selectedDepartment]);
+
+  useEffect(() => {
+    if (selectedCourse) {
+      fetchLessons(selectedCourse);
+    }
+  }, [selectedCourse]);
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchCourses = async (departmentId) => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, course_name, subject')
+        .eq('department_id', departmentId)
+        .order('course_name');
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    }
+  };
+
+  const fetchLessons = async (courseId) => {
+    try {
+      const { data, error } = await supabase
+        .from('lessons')
+        .select('id, lesson_name, period, lesson_order')
+        .eq('course_id', courseId)
+        .order('lesson_order');
+
+      if (error) throw error;
+      setLessons(data || []);
+    } catch (error) {
+      console.error('Error fetching lessons:', error);
+    }
+  };
 
   const fetchQuizData = async () => {
     try {
       setLoading(true);
+      
+      // Fetch quiz with lesson, course, and department info
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
-        .select('*')
+        .select(`
+          *,
+          lessons (
+            id,
+            lesson_name,
+            period,
+            course_id,
+            courses (
+              id,
+              course_name,
+              subject,
+              department_id,
+              departments (
+                id,
+                name
+              )
+            )
+          )
+        `)
         .eq('id', id)
         .eq('user_id', user.id)
         .single();
@@ -81,17 +165,33 @@ const EditQuiz = () => {
 
       if (questionsError) throw questionsError;
 
+      // Set quiz data
       setQuizData({
         title: quizData.title,
-        subject: quizData.subject,
-        course: quizData.course,
+        lesson_id: quizData.lesson_id,
         time_limit: quizData.time_limit,
         quiz_code: quizData.quiz_code,
-        open_time: formatDateTimeLocal(quizData.open_time),
-        close_time: formatDateTimeLocal(quizData.close_time),
+        category: quizData.category || '',
       });
 
-      // Map the questions with support for both types
+      // Set display info and selection states
+      if (quizData.lessons) {
+        const lesson = quizData.lessons;
+        const course = lesson.courses;
+        const department = course?.departments;
+
+        setDisplayInfo({
+          departmentName: department?.name || '',
+          courseName: course?.course_name || '',
+          lessonName: lesson.lesson_name || '',
+          subject: course?.subject || '',
+        });
+
+        setSelectedDepartment(department?.id || '');
+        setSelectedCourse(course?.id || '');
+      }
+
+      // Map the questions with support for all types
       const mappedQuestions = (questionsData || []).map(q => ({
         id: q.id,
         question_text: q.question_text || '',
@@ -121,6 +221,34 @@ const EditQuiz = () => {
   const handleQuestionChange = (index, field, value) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
+    
+    // Handle question type change
+    if (field === 'question_type') {
+      if (value === 'true_false') {
+        updated[index].option_a = 'True';
+        updated[index].option_b = 'False';
+        updated[index].option_c = '';
+        updated[index].option_d = '';
+        updated[index].correct_answer = 'A';
+        updated[index].correct_text_answer = '';
+      } else if (value === 'multiple_choice') {
+        updated[index].option_a = '';
+        updated[index].option_b = '';
+        updated[index].option_c = '';
+        updated[index].option_d = '';
+        updated[index].correct_answer = 'A';
+        updated[index].correct_text_answer = '';
+      } else {
+        // fill_blank, identification, essay
+        updated[index].option_a = '';
+        updated[index].option_b = '';
+        updated[index].option_c = '';
+        updated[index].option_d = '';
+        updated[index].correct_answer = null;
+        updated[index].correct_text_answer = '';
+      }
+    }
+    
     setQuestions(updated);
   };
 
@@ -146,10 +274,18 @@ const EditQuiz = () => {
   };
 
   const validateForm = () => {
-    if (!quizData.title.trim()) { setError('Quiz title is required'); return false; }
-    if (!quizData.subject.trim()) { setError('Subject is required'); return false; }
-    if (!quizData.course.trim()) { setError('Course is required'); return false; }
-    if (questions.length === 0) { setError('At least one question is required'); return false; }
+    if (!quizData.title.trim()) { 
+      setError('Quiz title is required'); 
+      return false; 
+    }
+    if (!quizData.lesson_id) { 
+      setError('Lesson is required'); 
+      return false; 
+    }
+    if (questions.length === 0) { 
+      setError('At least one question is required'); 
+      return false; 
+    }
     
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
@@ -163,9 +299,18 @@ const EditQuiz = () => {
           setError(`Question ${i + 1}: All options must be filled for multiple choice`);
           return false;
         }
-      } else if (q.question_type === 'fill_blank') {
-        if (!q.correct_text_answer.trim()) {
-          setError(`Question ${i + 1}: Correct answer is required for fill-in-the-blank`);
+      }
+      
+      if (q.question_type === 'true_false') {
+        if (!q.correct_answer) {
+          setError(`Question ${i + 1}: Please select the correct answer (True or False)`);
+          return false;
+        }
+      }
+      
+      if (['fill_blank', 'identification'].includes(q.question_type)) {
+        if (!q.correct_text_answer?.trim()) {
+          setError(`Question ${i + 1}: Correct answer is required`);
           return false;
         }
       }
@@ -180,21 +325,21 @@ const EditQuiz = () => {
     try {
       setSaving(true);
 
+      // Update quiz
       const { error: quizError } = await supabase
         .from('quizzes')
         .update({
           title: quizData.title,
-          subject: quizData.subject,
-          course: quizData.course,
+          lesson_id: quizData.lesson_id,
           time_limit: quizData.time_limit,
-          open_time: formatForDatabase(quizData.open_time),
-          close_time: formatForDatabase(quizData.close_time),
+          category: quizData.category || null,
         })
         .eq('id', id)
         .eq('user_id', user.id);
 
       if (quizError) throw quizError;
 
+      // Delete removed questions
       for (const questionId of deletedQuestions) {
         const { error: deleteError } = await supabase
           .from('questions')
@@ -203,16 +348,17 @@ const EditQuiz = () => {
         if (deleteError) throw deleteError;
       }
 
+      // Update or insert questions
       for (const question of questions) {
         const questionData = {
           question_text: question.question_text,
           question_type: question.question_type,
-          option_a: question.question_type === 'multiple_choice' ? question.option_a : '',
-          option_b: question.question_type === 'multiple_choice' ? question.option_b : '',
-          option_c: question.question_type === 'multiple_choice' ? question.option_c : '',
-          option_d: question.question_type === 'multiple_choice' ? question.option_d : '',
-          correct_answer: question.question_type === 'multiple_choice' ? question.correct_answer : null,
-          correct_text_answer: question.question_type === 'fill_blank' ? question.correct_text_answer : null
+          option_a: ['multiple_choice', 'true_false'].includes(question.question_type) ? question.option_a : null,
+          option_b: ['multiple_choice', 'true_false'].includes(question.question_type) ? question.option_b : null,
+          option_c: question.question_type === 'multiple_choice' ? question.option_c : null,
+          option_d: question.question_type === 'multiple_choice' ? question.option_d : null,
+          correct_answer: ['multiple_choice', 'true_false'].includes(question.question_type) ? question.correct_answer : null,
+          correct_text_answer: ['fill_blank', 'identification', 'essay'].includes(question.question_type) ? question.correct_text_answer : null
         };
 
         if (question.id) {
@@ -241,6 +387,104 @@ const EditQuiz = () => {
       setSaving(false);
     }
   };
+
+  const renderQuestionInputs = (question, index) => {
+    switch (question.question_type) {
+      case 'multiple_choice':
+        return (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {['A', 'B', 'C', 'D'].map((option) => (
+                <div key={option}>
+                  <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                    Option {option} *
+                  </label>
+                  <input
+                    type="text"
+                    value={question[`option_${option.toLowerCase()}`]}
+                    onChange={(e) => handleQuestionChange(index, `option_${option.toLowerCase()}`, e.target.value)}
+                    className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                    placeholder={`Enter option ${option}`}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                Correct Answer *
+              </label>
+              <select
+                value={question.correct_answer || 'A'}
+                onChange={(e) => handleQuestionChange(index, 'correct_answer', e.target.value)}
+                className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all uppercase font-semibold"
+              >
+                <option value="A">Option A</option>
+                <option value="B">Option B</option>
+                <option value="C">Option C</option>
+                <option value="D">Option D</option>
+              </select>
+            </div>
+          </>
+        );
+
+      case 'true_false':
+        return (
+          <div>
+            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+              Correct Answer *
+            </label>
+            <select
+              value={question.correct_answer}
+              onChange={(e) => handleQuestionChange(index, 'correct_answer', e.target.value)}
+              className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all font-semibold"
+            >
+              <option value="A">True</option>
+              <option value="B">False</option>
+            </select>
+          </div>
+        );
+
+      case 'fill_blank':
+      case 'identification':
+        return (
+          <div>
+            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+              Correct Answer *
+            </label>
+            <input
+              type="text"
+              value={question.correct_text_answer}
+              onChange={(e) => handleQuestionChange(index, 'correct_text_answer', e.target.value)}
+              className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all"
+              placeholder="Enter the correct answer"
+            />
+          </div>
+        );
+
+      case 'essay':
+        return (
+          <div>
+            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+              Model/Expected Answer (Optional)
+            </label>
+            <textarea
+              value={question.correct_text_answer}
+              onChange={(e) => handleQuestionChange(index, 'correct_text_answer', e.target.value)}
+              className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all min-h-[100px]"
+              placeholder="Enter a model answer or key points to guide grading (optional)"
+            />
+            <p className="text-xs text-yellow-400 mt-2">
+              ⚠️ Note: Essay questions require manual grading
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+  // EditQuiz.jsx - Part 2 (Continuation - JSX Return)
 
   if (loading) {
     return (
@@ -297,63 +541,153 @@ const EditQuiz = () => {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              {[
-                { label: 'Quiz Title *', field: 'title', placeholder: 'Enter quiz title', type: 'text' },
-                { label: 'Course *', field: 'course', placeholder: 'e.g., Web Development', type: 'text' },
-                { label: 'Subject *', field: 'subject', placeholder: 'e.g., JavaScript', type: 'text' },
-              ].map(({ label, field, placeholder, type, icon: Icon }, idx) => (
-                <div key={idx}>
-                  <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
-                    {Icon && <Icon className="w-4 h-4 text-cyan-400" />} {label}
-                  </label>
-                  <input
-                    type={type}
-                    value={quizData[field]}
-                    placeholder={placeholder}
-                    min={field === 'time_limit' ? 1 : undefined}
-                    max={field === 'time_limit' ? 180 : undefined}
-                    onChange={(e) => handleQuizDataChange(field, type === 'number' ? parseInt(e.target.value) || 30 : e.target.value)}
-                    className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
-                  />
-                </div>
-              ))}
+              {/* Quiz Title */}
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                  Quiz Title *
+                </label>
+                <input
+                  type="text"
+                  value={quizData.title}
+                  placeholder="Enter quiz title"
+                  onChange={(e) => handleQuizDataChange('title', e.target.value)}
+                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                />
+              </div>
 
-              {/* Quiz Code */}
+              {/* Current Assignment Info (Read-Only) */}
+              <div className="sm:col-span-2 bg-gray-900/50 border-2 border-blue-500/20 rounded-xl p-4">
+                <h3 className="text-sm font-bold text-blue-300 mb-3 uppercase tracking-wider">Current Assignment</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-400 uppercase text-xs mb-1">Department</p>
+                    <p className="text-white font-semibold">{displayInfo.departmentName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 uppercase text-xs mb-1">Course</p>
+                    <p className="text-white font-semibold">{displayInfo.courseName || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400 uppercase text-xs mb-1">Lesson</p>
+                    <p className="text-white font-semibold">{displayInfo.lessonName || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Change Assignment Section */}
+              <div className="sm:col-span-2">
+                <h3 className="text-sm font-bold text-purple-300 mb-3 uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Change Assignment
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-blue-400" />
+                      Department
+                    </label>
+                    <select
+                      value={selectedDepartment}
+                      onChange={(e) => {
+                        setSelectedDepartment(e.target.value);
+                        setSelectedCourse('');
+                        setQuizData(prev => ({ ...prev, lesson_id: '' }));
+                      }}
+                      className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all font-semibold"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-purple-400" />
+                      Course
+                    </label>
+                    <select
+                      value={selectedCourse}
+                      onChange={(e) => {
+                        setSelectedCourse(e.target.value);
+                        setQuizData(prev => ({ ...prev, lesson_id: '' }));
+                      }}
+                      disabled={!selectedDepartment}
+                      className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all font-semibold disabled:opacity-50"
+                    >
+                      <option value="">
+                        {selectedDepartment ? 'Select Course' : 'Select Department First'}
+                      </option>
+                      {courses.map(course => (
+                        <option key={course.id} value={course.id}>
+                          {course.course_name} {course.subject ? `- ${course.subject}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-green-400" />
+                      Lesson *
+                    </label>
+                    <select
+                      value={quizData.lesson_id}
+                      onChange={(e) => handleQuizDataChange('lesson_id', e.target.value)}
+                      disabled={!selectedCourse}
+                      className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all font-semibold disabled:opacity-50"
+                    >
+                      <option value="">
+                        {selectedCourse ? 'Select Lesson' : 'Select Course First'}
+                      </option>
+                      {lessons.map(lesson => (
+                        <option key={lesson.id} value={lesson.id}>
+                          {lesson.lesson_name} {lesson.period ? `(${lesson.period})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Time Limit */}
               <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-400" />
+                  Time Limit (minutes)
+                </label>
+                <input
+                  type="number"
+                  value={quizData.time_limit}
+                  min="1"
+                  max="180"
+                  onChange={(e) => handleQuizDataChange('time_limit', parseInt(e.target.value) || 30)}
+                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                  Category (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={quizData.category}
+                  placeholder="e.g., Beginner, Advanced"
+                  onChange={(e) => handleQuizDataChange('category', e.target.value)}
+                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
+                />
+              </div>
+
+              {/* Quiz Code (Read-Only) */}
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">Quiz Code (Read-Only)</label>
                 <div className="w-full bg-gray-900/70 border-2 border-gray-600/30 text-gray-400 rounded-xl py-2 sm:py-3 px-3 sm:px-4 flex items-center gap-2">
                   <Hash className="w-4 h-4" />
                   <span className="font-mono font-bold tracking-wider">{quizData.quiz_code}</span>
                 </div>
-              </div>
-
-              {/* Open Time */}
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-green-400" />
-                  Opens At
-                </label>
-                <input
-                  type="datetime-local"
-                  value={quizData.open_time}
-                  onChange={(e) => handleQuizDataChange('open_time', e.target.value)}
-                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
-                />
-              </div>
-
-              {/* Close Time */}
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-red-400" />
-                  Closes At
-                </label>
-                <input
-                  type="datetime-local"
-                  value={quizData.close_time}
-                  onChange={(e) => handleQuizDataChange('close_time', e.target.value)}
-                  min={quizData.open_time || ''}
-                  className="w-full bg-gray-900/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
-                />
               </div>
             </div>
           </div>
@@ -408,8 +742,11 @@ const EditQuiz = () => {
                           onChange={(e) => handleQuestionChange(index, 'question_type', e.target.value)}
                           className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all uppercase font-semibold"
                         >
-                          <option value="multiple_choice">Multiple Choice</option>
-                          <option value="fill_blank">Fill in the Blank</option>
+                          {questionTypes.map(type => (
+                            <option key={type.value} value={type.value}>
+                              {type.label}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
@@ -425,56 +762,8 @@ const EditQuiz = () => {
                         />
                       </div>
 
-                      {/* Conditional Rendering Based on Question Type */}
-                      {question.question_type === 'multiple_choice' ? (
-                        <>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {['A', 'B', 'C', 'D'].map((option) => (
-                              <div key={option}>
-                                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                                  Option {option} *
-                                </label>
-                                <input
-                                  type="text"
-                                  value={question[`option_${option.toLowerCase()}`]}
-                                  onChange={(e) => handleQuestionChange(index, `option_${option.toLowerCase()}`, e.target.value)}
-                                  className="w-full bg-gray-800/50 border-2 border-indigo-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-indigo-400 focus:shadow-lg focus:shadow-indigo-500/20 transition-all"
-                                  placeholder={`Enter option ${option}`}
-                                />
-                              </div>
-                            ))}
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                              Correct Answer *
-                            </label>
-                            <select
-                              value={question.correct_answer || 'A'}
-                              onChange={(e) => handleQuestionChange(index, 'correct_answer', e.target.value)}
-                              className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all uppercase font-semibold"
-                            >
-                              <option value="A">Option A</option>
-                              <option value="B">Option B</option>
-                              <option value="C">Option C</option>
-                              <option value="D">Option D</option>
-                            </select>
-                          </div>
-                        </>
-                      ) : (
-                        <div>
-                          <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                            Correct Answer *
-                          </label>
-                          <input
-                            type="text"
-                            value={question.correct_text_answer}
-                            onChange={(e) => handleQuestionChange(index, 'correct_text_answer', e.target.value)}
-                            className="w-full bg-gray-800/50 border-2 border-green-500/30 text-white rounded-xl py-2 sm:py-3 px-3 sm:px-4 focus:outline-none focus:border-green-400 focus:shadow-lg focus:shadow-green-500/20 transition-all"
-                            placeholder="Enter the correct answer"
-                          />
-                        </div>
-                      )}
+                      {/* Dynamic inputs based on question type */}
+                      {renderQuestionInputs(question, index)}
                     </div>
                   </div>
                 ))}

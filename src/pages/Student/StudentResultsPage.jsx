@@ -22,22 +22,29 @@ const StudentResultsPage = () => {
     if (!user?.id) return;
 
     try {
-      const { data: scoresData, error } = await supabase
-        .from('scores')
-        .select(`
-          *,
-          quizzes:quiz_id (
-            id,
-            title,
-            subject,
-            course,
-            period,
-            lesson,
-            time_limit
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+      // Line 27-42 - Update the fetch query
+const { data: scoresData, error } = await supabase
+  .from('scores')
+  .select(`
+    *,
+    quizzes:quiz_id (
+      id,
+      title,
+      time_limit,
+      course:course_id (
+        id,
+        name,
+        subject
+      ),
+      lesson:lesson_id (
+        id,
+        name,
+        period
+      )
+    )
+  `)
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -241,20 +248,20 @@ const StudentResultsPage = () => {
 
                               {/* Course & Subject Tags */}
                               <div className="flex flex-wrap gap-2 mb-3">
-                                {result.quizzes?.course && (
+                                {result.quizzes?.course?.name && (
                                   <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                                    {result.quizzes.course}
+                                    {result.quizzes.course.name}
                                   </span>
                                 )}
-                                {result.quizzes?.subject && (
+                                {result.quizzes?.course?.subject && (
                                   <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                                    {result.quizzes.subject}
+                                    {result.quizzes.course.subject}
                                   </span>
                                 )}
-                                {result.quizzes?.period && (
+                                {result.quizzes?.lesson?.period && (
                                   <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold flex items-center gap-1 rounded-full uppercase tracking-wider">
                                     <Calendar className="w-3 h-3" />
-                                    {result.quizzes.period}
+                                    {result.quizzes.lesson.period}
                                   </span>
                                 )}
                               </div>

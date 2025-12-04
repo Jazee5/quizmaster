@@ -1,4 +1,4 @@
-// src/pages/ReviewQuizzesPage.jsx
+// ReviewQuizzesPage.jsx - Updated for new database structure
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -28,7 +28,7 @@ const ReviewQuizzesPage = () => {
     filterQuizzes();
   }, [searchTerm, selectedCourse, selectedSubject, quizzes]);
 
- const fetchQuizzesForReview = async () => {
+  const fetchQuizzesForReview = async () => {
     try {
       // First, get all quiz scores for the current user
       const { data: scores, error: scoresError } = await supabase
@@ -47,18 +47,24 @@ const ReviewQuizzesPage = () => {
         return;
       }
 
-      // Fetch only the quizzes that have been attempted
+      // Fetch only the quizzes that have been attempted with course and lesson details
       const { data, error } = await supabase
         .from('quizzes')
         .select(`
           id,
           title,
-          subject,
-          course,
-          period,
-          lesson,
           created_at,
-          questions(count)
+          questions(count),
+          course:course_id (
+            id,
+            name,
+            subject
+          ),
+          lesson:lesson_id (
+            id,
+            name,
+            period
+          )
         `)
         .in('id', attemptedQuizIds)
         .order('created_at', { ascending: false });
@@ -67,8 +73,9 @@ const ReviewQuizzesPage = () => {
 
       setQuizzes(data || []);
 
-      const uniqueCourses = [...new Set(data.map(q => q.course).filter(Boolean))];
-      const uniqueSubjects = [...new Set(data.map(q => q.subject).filter(Boolean))];
+      // Extract unique courses and subjects from the nested data
+      const uniqueCourses = [...new Set(data.map(q => q.course?.name).filter(Boolean))];
+      const uniqueSubjects = [...new Set(data.map(q => q.course?.subject).filter(Boolean))];
 
       setCourses(uniqueCourses);
       setSubjects(uniqueSubjects);
@@ -85,17 +92,17 @@ const ReviewQuizzesPage = () => {
     if (searchTerm) {
       filtered = filtered.filter(quiz =>
         quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.course?.toLowerCase().includes(searchTerm.toLowerCase())
+        quiz.course?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        quiz.course?.name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (selectedCourse) {
-      filtered = filtered.filter(quiz => quiz.course === selectedCourse);
+      filtered = filtered.filter(quiz => quiz.course?.name === selectedCourse);
     }
 
     if (selectedSubject) {
-      filtered = filtered.filter(quiz => quiz.subject === selectedSubject);
+      filtered = filtered.filter(quiz => quiz.course?.subject === selectedSubject);
     }
 
     setFilteredQuizzes(filtered);
@@ -143,7 +150,7 @@ const ReviewQuizzesPage = () => {
             <div className="flex items-center gap-2 mb-4">
               <Filter className="w-5 h-5 text-purple-400" />
               <h2 className="text-lg font-semibold text-purple-300">Filters</h2>
-              {(  selectedSubject) && (
+              {(selectedCourse || selectedSubject) && (
                 <button
                   onClick={clearFilters}
                   className="ml-auto text-sm text-red-400 hover:text-red-300 font-medium flex items-center gap-1"
@@ -155,10 +162,31 @@ const ReviewQuizzesPage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             
+              {/* Search by title/course/subject */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search quizzes..."
+                  className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg py-2 pl-10 pr-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                />
+              </div>
 
-            
+              {/* Course Filter */}
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg py-2 px-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+              >
+                <option value="">All Courses</option>
+                {courses.map(course => (
+                  <option key={course} value={course}>{course}</option>
+                ))}
+              </select>
 
+              {/* Subject Filter */}
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
@@ -201,19 +229,19 @@ const ReviewQuizzesPage = () => {
                     <h3 className="text-xl font-bold text-purple-300 mb-3">{quiz.title}</h3>
 
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {quiz.course && (
-                        <span className="px-3 py-1 bg-blue-900/50 text-blue-300 text-xs font-semibold rounded-full">
-                          {quiz.course}
+                      {quiz.course?.name && (
+                        <span className="px-3 py-1 bg-blue-900/50 text-blue-300 text-xs font-semibold rounded-full border border-blue-700/50">
+                          {quiz.course.name}
                         </span>
                       )}
-                      {quiz.subject && (
-                        <span className="px-3 py-1 bg-purple-900/50 text-purple-300 text-xs font-semibold rounded-full">
-                          {quiz.subject}
+                      {quiz.course?.subject && (
+                        <span className="px-3 py-1 bg-purple-900/50 text-purple-300 text-xs font-semibold rounded-full border border-purple-700/50">
+                          {quiz.course.subject}
                         </span>
                       )}
-                      {quiz.period && (
-                        <span className="px-3 py-1 bg-green-900/50 text-green-300 text-xs font-semibold rounded-full">
-                          {quiz.period}
+                      {quiz.lesson?.period && (
+                        <span className="px-3 py-1 bg-green-900/50 text-green-300 text-xs font-semibold rounded-full border border-green-700/50">
+                          {quiz.lesson.period}
                         </span>
                       )}
                     </div>

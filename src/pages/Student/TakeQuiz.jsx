@@ -1,4 +1,4 @@
-// TakeQuiz.jsx - Fixed for Philippine Time
+// TakeQuiz.jsx - Updated for new database structure
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../config/supabaseClient";
@@ -11,7 +11,6 @@ import {
   Send,
   Timer,
   Zap,
-  Lock
 } from "lucide-react";
 
 const TakeQuiz = () => {
@@ -38,59 +37,6 @@ const TakeQuiz = () => {
     essay: 120,
   };
 
-  const checkQuizAvailability = (quiz) => {
-    const now = new Date();
-    
-    // Parse times without timezone conversion (treat as Philippine time)
-    let openTime = null;
-    let closeTime = null;
-    
-    if (quiz.open_time) {
-      const cleanOpenTime = quiz.open_time.replace(/\+\d{2}:\d{2}$/, '').replace(' ', 'T').slice(0, 16);
-      openTime = new Date(cleanOpenTime);
-    }
-    
-    if (quiz.close_time) {
-      const cleanCloseTime = quiz.close_time.replace(/\+\d{2}:\d{2}$/, '').replace(' ', 'T').slice(0, 16);
-      closeTime = new Date(cleanCloseTime);
-    }
-
-    if (!openTime && !closeTime) {
-      return { available: true, status: 'open', message: '' };
-    }
-
-    if (openTime && now < openTime) {
-      return {
-        available: false,
-        status: 'not_open',
-        message: `Quiz opens on ${openTime.toLocaleString('en-PH', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        })}`
-      };
-    }
-
-    if (closeTime && now > closeTime) {
-      return {
-        available: false,
-        status: 'closed',
-        message: `Quiz closed on ${closeTime.toLocaleString('en-PH', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        })}`
-      };
-    }
-
-    return {
-      available: true,
-      status: 'open',
-      message: closeTime ? `Quiz closes on ${closeTime.toLocaleString('en-PH', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-      })}` : ''
-    };
-  };
-
   useEffect(() => {
     fetchQuizData();
   }, [quizId]);
@@ -115,7 +61,19 @@ const TakeQuiz = () => {
     try {
       const { data: quizData, error: quizError } = await supabase
         .from("quizzes")
-        .select("*")
+        .select(`
+          *,
+          course:course_id (
+            id,
+            name,
+            subject
+          ),
+          lesson:lesson_id (
+            id,
+            name,
+            period
+          )
+        `)
         .eq("id", quizId)
         .single();
       if (quizError) throw quizError;
@@ -275,7 +233,7 @@ const TakeQuiz = () => {
               return (
                 <label
                   key={option}
-                 className={`flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all group text-sm sm:text-base ${
+                  className={`flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all group text-sm sm:text-base ${
                     userAnswer === optionText
                       ? "border-cyan-400 bg-cyan-500/20 shadow-lg shadow-cyan-500/20"
                       : "border-gray-600 hover:border-cyan-500/50 hover:bg-gray-800/50"
@@ -391,48 +349,6 @@ const TakeQuiz = () => {
   }
 
   if (!quizStarted) {
-    const availability = checkQuizAvailability(quiz);
-
-    if (!availability.available) {
-      return (
-        <>
-          <Navbar />
-          <div className="min-h-screen py-8 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 relative overflow-hidden">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-20 left-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-              <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-            </div>
-
-            <div className="w-full max-w-md mx-auto px-3 sm:px-4 relative z-10">
-              <div className="bg-gray-800/50 backdrop-blur-xl rounded-2xl border-2 border-red-500/50 p-8 text-center shadow-2xl">
-                <Lock className="w-20 h-20 text-red-400 mx-auto mb-6" />
-                <h1 className="text-4xl font-bold text-white mb-4 uppercase tracking-wide">
-                  Quiz Unavailable
-                </h1>
-                <div className={`p-4 rounded-xl mb-6 ${
-                  availability.status === 'not_open' 
-                    ? 'bg-yellow-500/20 border border-yellow-500/50' 
-                    : 'bg-red-500/20 border border-red-500/50'
-                }`}>
-                  <p className={`text-lg font-bold uppercase tracking-wide ${
-                    availability.status === 'not_open' ? 'text-yellow-300' : 'text-red-300'
-                  }`}>
-                    {availability.message}
-                  </p>
-                </div>
-               <button
-                onClick={() => navigate('/dashboard')}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-8 rounded-xl hover:shadow-2xl hover:shadow-purple-500/50 transform hover:scale-105 transition-all uppercase tracking-wider"
-              >
-                Back to Dashboard
-              </button>
-              </div>
-            </div>
-          </div>
-        </>
-      );
-    }
-
     return (
       <>
         <Navbar />
@@ -468,11 +384,24 @@ const TakeQuiz = () => {
                   </div>
                 </div>
 
-                {availability.message && (
-                  <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-3 mb-6">
-                    <p className="text-green-300 font-semibold text-sm sm:text-base">
-                      {availability.message}
-                    </p>
+                {/* Show course/subject if available */}
+                {(quiz.course?.name || quiz.course?.subject || quiz.lesson?.period) && (
+                  <div className="flex flex-wrap gap-2 justify-center mb-6">
+                    {quiz.course?.name && (
+                      <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                        {quiz.course.name}
+                      </span>
+                    )}
+                    {quiz.course?.subject && (
+                      <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                        {quiz.course.subject}
+                      </span>
+                    )}
+                    {quiz.lesson?.period && (
+                      <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                        {quiz.lesson.period}
+                      </span>
+                    )}
                   </div>
                 )}
 

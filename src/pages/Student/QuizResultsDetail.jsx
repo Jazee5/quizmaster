@@ -1,3 +1,4 @@
+// QuizResultsDetail.jsx - Updated for new database structure
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -19,10 +20,22 @@ const QuizResultsDetail = () => {
 
   const fetchQuizResults = async () => {
     try {
-      // Fetch quiz details
+      // Fetch quiz details with course and lesson
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
-        .select('*')
+        .select(`
+          *,
+          course:course_id (
+            id,
+            name,
+            subject
+          ),
+          lesson:lesson_id (
+            id,
+            name,
+            period
+          )
+        `)
         .eq('id', quizId)
         .eq('user_id', user.id) // Ensure teacher owns this quiz
         .single();
@@ -166,12 +179,21 @@ const QuizResultsDetail = () => {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">{quiz.title}</h1>
                 <div className="flex gap-2 mb-2">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-full">
-                    {quiz.course}
-                  </span>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-semibold rounded-full">
-                    {quiz.subject}
-                  </span>
+                  {quiz.course?.name && (
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-full">
+                      {quiz.course.name}
+                    </span>
+                  )}
+                  {quiz.course?.subject && (
+                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-semibold rounded-full">
+                      {quiz.course.subject}
+                    </span>
+                  )}
+                  {quiz.lesson?.period && (
+                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
+                      {quiz.lesson.period}
+                    </span>
+                  )}
                 </div>
               </div>
               <button
