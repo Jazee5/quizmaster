@@ -599,7 +599,6 @@ const TeacherDashboard = () => {
           </div>
         </div>
       </div>
-      // TeacherDashboard.jsx - Part 3 (Final - Modals)
 
       {/* Single Quiz Results Modal */}
       {showResultsModal && selectedQuiz && (
