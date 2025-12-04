@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../config/supabaseClient';
-import { Trophy, BookOpen, Clock, Eye, TrendingUp, Calendar } from 'lucide-react';
+import { Trophy, BookOpen, Clock, Eye, TrendingUp, Calendar, RotateCw } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 
 const StudentResultsPage = () => {
@@ -22,33 +22,37 @@ const StudentResultsPage = () => {
     if (!user?.id) return;
 
     try {
-      // Line 27-42 - Update the fetch query
-const { data: scoresData, error } = await supabase
-  .from('scores')
-  .select(`
-    *,
-    quizzes:quiz_id (
-      id,
-      title,
-      time_limit,
-      course:course_id (
-        id,
-        name,
-        subject
-      ),
-      lesson:lesson_id (
-        id,
-        name,
-        period
-      )
-    )
-  `)
-  .eq('user_id', user.id)
-  .order('created_at', { ascending: false });
+      const { data: scoresData, error } = await supabase
+        .from('scores')
+        .select(`
+          *,
+          quizzes:quiz_id (
+            id,
+            title,
+            lessons (
+              id,
+              lesson_name,
+              courses (
+                id,
+                course_name,
+                subject
+              )
+            )
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setResults(scoresData || []);
+      // Group results by quiz_id and add attempt number
+      const resultsWithAttempts = scoresData.map((result) => {
+        const quizAttempts = scoresData.filter(r => r.quiz_id === result.quiz_id);
+        const attemptNumber = quizAttempts.findIndex(r => r.id === result.id) + 1;
+        return { ...result, attemptNumber, totalAttempts: quizAttempts.length };
+      });
+
+      setResults(resultsWithAttempts || []);
 
       // Update stats
       if (scoresData && scoresData.length > 0) {
@@ -244,24 +248,29 @@ const { data: scoresData, error } = await supabase
                             <div className="flex-1">
                               <h3 className="text-xl font-bold text-white mb-2">
                                 {result.quizzes?.title || 'Quiz'}
+                                {result.totalAttempts > 1 && (
+                                  <span className="ml-2 text-sm text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 px-2 py-1 rounded-full">
+                                    Attempt {result.attemptNumber} of {result.totalAttempts}
+                                  </span>
+                                )}
                               </h3>
 
                               {/* Course & Subject Tags */}
                               <div className="flex flex-wrap gap-2 mb-3">
-                                {result.quizzes?.course?.name && (
+                                {result.quizzes?.lessons?.courses?.course_name && (
                                   <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                                    {result.quizzes.course.name}
+                                    {result.quizzes.lessons.courses.course_name}
                                   </span>
                                 )}
-                                {result.quizzes?.course?.subject && (
+                                {result.quizzes?.lessons?.courses?.subject && (
                                   <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                                    {result.quizzes.course.subject}
+                                    {result.quizzes.lessons.courses.subject}
                                   </span>
                                 )}
-                                {result.quizzes?.lesson?.period && (
+                                {result.quizzes?.lessons?.lesson_name && (
                                   <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold flex items-center gap-1 rounded-full uppercase tracking-wider">
                                     <Calendar className="w-3 h-3" />
-                                    {result.quizzes.lesson.period}
+                                    {result.quizzes.lessons.lesson_name}
                                   </span>
                                 )}
                               </div>
@@ -307,16 +316,28 @@ const { data: scoresData, error } = await supabase
                             )}
                           </div>
 
-                          {/* Action Button */}
-                          <Link
-                            to={`/quiz-result/${result.quiz_id}`}
-                            className="block w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/50 text-center uppercase tracking-wider"
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <Eye className="w-4 h-4" />
-                              Review Answers & See Leaderboard
-                            </div>
-                          </Link>
+                          {/* Action Buttons */}
+                          <div className="flex gap-3">
+                            <Link
+                              to={`/quiz-result/${result.quiz_id}`}
+                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-gray-500/50 text-center uppercase tracking-wider"
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                <Eye className="w-4 h-4" />
+                                View Results
+                              </div>
+                            </Link>
+                            
+                            <Link
+                              to={`/take-quiz/${result.quiz_id}`}
+                              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/50 text-center uppercase tracking-wider"
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                <RotateCw className="w-4 h-4" />
+                                Retake Quiz
+                              </div>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     );

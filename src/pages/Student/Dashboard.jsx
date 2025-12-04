@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../config/supabaseClient';
-import { BookOpen, Trophy, Award, KeyRound } from 'lucide-react';
+import { BookOpen, Trophy, Award, KeyRound, Search } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import { usePreventZoom } from '../../hooks/usePreventZoom'; 
 
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  usePreventZoom();
   const [quizzes, setQuizzes] = useState([]);
   const [stats, setStats] = useState({ totalScores: 0, avgScore: 0 });
   const [error, setError] = useState('');
@@ -225,6 +227,21 @@ const Dashboard = () => {
               Quick Actions
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <Link
+                to="/browse-quizzes"
+                className="bg-gray-800/50 rounded-2xl p-4 border-2 border-blue-500/30 hover:border-blue-400 hover:shadow-2xl transition-all flex items-center gap-3"
+              >
+                <Search className="w-7 h-7 sm:w-9 sm:h-9 text-blue-400" />
+                <div>
+                  <h3 className="text-base sm:text-xl font-bold text-white mb-0.5 uppercase tracking-wide">
+                    Browse Quizzes
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wider font-semibold">
+                    Explore All Quizzes
+                  </p>
+                </div>
+              </Link>
+
               <Link
                 to="/review-quizzes"
                 className="bg-gray-800/50 rounded-2xl p-4 border-2 border-emerald-500/30 hover:border-emerald-400 hover:shadow-2xl transition-all flex items-center gap-3"

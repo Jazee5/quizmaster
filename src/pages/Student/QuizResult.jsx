@@ -41,15 +41,14 @@ const QuizResult = () => {
         .from("quizzes")
         .select(`
           *,
-          course:course_id (
+          lessons (
             id,
-            name,
-            subject
-          ),
-          lesson:lesson_id (
-            id,
-            name,
-            period
+            lesson_name,
+            courses (
+              id,
+              course_name,
+              subject
+            )
           )
         `)
         .eq("id", quizId)
@@ -149,20 +148,21 @@ const QuizResult = () => {
             </h1>
             
             {/* Course/Subject/Period Tags */}
+            {/* Course/Subject/Lesson Tags */}
             <div className="flex flex-wrap justify-center gap-2 mb-4">
-              {quiz?.course?.name && (
+              {quiz?.lessons?.courses?.course_name && (
                 <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/50 text-blue-200 text-sm font-semibold rounded-full">
-                  {quiz.course.name}
+                  {quiz.lessons.courses.course_name}
                 </span>
               )}
-              {quiz?.course?.subject && (
+              {quiz?.lessons?.courses?.subject && (
                 <span className="px-3 py-1 bg-purple-500/20 border border-purple-400/50 text-purple-200 text-sm font-semibold rounded-full">
-                  {quiz.course.subject}
+                  {quiz.lessons.courses.subject}
                 </span>
               )}
-              {quiz?.lesson?.period && (
+              {quiz?.lessons?.lesson_name && (
                 <span className="px-3 py-1 bg-green-500/20 border border-green-400/50 text-green-200 text-sm font-semibold rounded-full">
-                  {quiz.lesson.period}
+                  {quiz.lessons.lesson_name}
                 </span>
               )}
             </div>

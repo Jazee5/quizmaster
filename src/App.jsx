@@ -11,6 +11,7 @@ import TeacherLogin from './pages/Teacher/TeacherLogin';
 import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import Login from './pages/Student/Login';
 import Dashboard from './pages/Student/Dashboard';
+import BrowseQuizzes from './pages/Student/BrowseQuizzes';
 import CreateQuiz from './pages/Teacher/CreateQuiz';
 import EditQuiz from './pages/Teacher/EditQuiz';
 import QuizResult from './pages/Student/QuizResult';
@@ -34,7 +35,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/teacher-login" element={<TeacherLogin />} />
 
-          {/* Protected routes */}
+          {/* Protected routes - Teacher */}
           <Route 
             path="/teacher-dashboard" 
             element={
@@ -45,6 +46,25 @@ function App() {
           />
 
           <Route
+            path="/create-quiz"
+            element={
+              <ProtectedRoute requiredRole="teacher">
+                <CreateQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/edit-quiz/:id"
+            element={
+              <ProtectedRoute requiredRole="teacher">
+                <EditQuiz />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected routes - Student */}
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute requiredRole="student">
@@ -53,13 +73,11 @@ function App() {
             }
           />
 
-         
-
           <Route
-            path="/create-quiz"
+            path="/browse-quizzes"
             element={
-              <ProtectedRoute requiredRole="teacher">
-                <CreateQuiz />
+              <ProtectedRoute requiredRole="student">
+                <BrowseQuizzes />
               </ProtectedRoute>
             }
           />
@@ -123,15 +141,6 @@ function App() {
             element={
               <ProtectedRoute requiredRole="student">
                 <FlashcardReview />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/edit-quiz/:id"
-            element={
-              <ProtectedRoute requiredRole="teacher">
-                <EditQuiz />
               </ProtectedRoute>
             }
           />

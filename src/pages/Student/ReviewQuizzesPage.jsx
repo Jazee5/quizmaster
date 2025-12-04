@@ -48,24 +48,23 @@ const ReviewQuizzesPage = () => {
       }
 
       // Fetch only the quizzes that have been attempted with course and lesson details
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select(`
-          id,
-          title,
-          created_at,
-          questions(count),
-          course:course_id (
-            id,
-            name,
-            subject
-          ),
-          lesson:lesson_id (
-            id,
-            name,
-            period
-          )
-        `)
+     const { data, error } = await supabase
+  .from('quizzes')
+  .select(`
+    id,
+    title,
+    created_at,
+    questions(count),
+    lessons (
+      id,
+      lesson_name,
+      courses (
+        id,
+        course_name,
+        subject
+      )
+    )
+  `)
         .in('id', attemptedQuizIds)
         .order('created_at', { ascending: false });
 
@@ -86,27 +85,27 @@ const ReviewQuizzesPage = () => {
     }
   };
 
-  const filterQuizzes = () => {
-    let filtered = [...quizzes];
+ const filterQuizzes = () => {
+  let filtered = [...quizzes];
 
-    if (searchTerm) {
-      filtered = filtered.filter(quiz =>
-        quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.course?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        quiz.course?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+  if (searchTerm) {
+    filtered = filtered.filter(quiz =>
+      quiz.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quiz.lessons?.courses?.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quiz.lessons?.courses?.course_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
 
-    if (selectedCourse) {
-      filtered = filtered.filter(quiz => quiz.course?.name === selectedCourse);
-    }
+  if (selectedCourse) {
+    filtered = filtered.filter(quiz => quiz.lessons?.courses?.course_name === selectedCourse);
+  }
 
-    if (selectedSubject) {
-      filtered = filtered.filter(quiz => quiz.course?.subject === selectedSubject);
-    }
+  if (selectedSubject) {
+    filtered = filtered.filter(quiz => quiz.lessons?.courses?.subject === selectedSubject);
+  }
 
-    setFilteredQuizzes(filtered);
-  };
+  setFilteredQuizzes(filtered);
+};
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -161,18 +160,7 @@ const ReviewQuizzesPage = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Search by title/course/subject */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search quizzes..."
-                  className="w-full bg-gray-900 border border-gray-700 text-gray-200 rounded-lg py-2 pl-10 pr-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">              
 
               {/* Course Filter */}
               <select
@@ -220,47 +208,47 @@ const ReviewQuizzesPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredQuizzes.map((quiz) => (
-                <div
-                  key={quiz.id}
-                  className="bg-gray-800/70 border border-gray-700 rounded-2xl p-6 shadow-lg hover:shadow-purple-500/20 transition-all duration-300"
-                >
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-purple-300 mb-3">{quiz.title}</h3>
+            {filteredQuizzes.map((quiz) => (
+  <div
+    key={quiz.id}
+    className="bg-gray-800/70 border border-gray-700 rounded-2xl p-6 shadow-lg hover:shadow-purple-500/20 transition-all duration-300"
+  >
+    <div className="mb-4">
+      <h3 className="text-xl font-bold text-purple-300 mb-3">{quiz.title}</h3>
 
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {quiz.course?.name && (
-                        <span className="px-3 py-1 bg-blue-900/50 text-blue-300 text-xs font-semibold rounded-full border border-blue-700/50">
-                          {quiz.course.name}
-                        </span>
-                      )}
-                      {quiz.course?.subject && (
-                        <span className="px-3 py-1 bg-purple-900/50 text-purple-300 text-xs font-semibold rounded-full border border-purple-700/50">
-                          {quiz.course.subject}
-                        </span>
-                      )}
-                      {quiz.lesson?.period && (
-                        <span className="px-3 py-1 bg-green-900/50 text-green-300 text-xs font-semibold rounded-full border border-green-700/50">
-                          {quiz.lesson.period}
-                        </span>
-                      )}
-                    </div>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {quiz.lessons?.courses?.course_name && (
+          <span className="px-3 py-1 bg-blue-900/50 text-blue-300 text-xs font-semibold rounded-full border border-blue-700/50">
+            {quiz.lessons.courses.course_name}
+          </span>
+        )}
+        {quiz.lessons?.courses?.subject && (
+          <span className="px-3 py-1 bg-purple-900/50 text-purple-300 text-xs font-semibold rounded-full border border-purple-700/50">
+            {quiz.lessons.courses.subject}
+          </span>
+        )}
+        {quiz.lessons?.lesson_name && (
+          <span className="px-3 py-1 bg-green-900/50 text-green-300 text-xs font-semibold rounded-full border border-green-700/50">
+            {quiz.lessons.lesson_name}
+          </span>
+        )}
+      </div>
 
-                    <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900 rounded-lg p-3 border border-gray-700">
-                      <BookOpen className="w-4 h-4 text-purple-400" />
-                      <span>{quiz.questions?.[0]?.count || 0} flashcards</span>
-                    </div>
-                  </div>
+      <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900 rounded-lg p-3 border border-gray-700">
+        <BookOpen className="w-4 h-4 text-purple-400" />
+        <span>{quiz.questions?.[0]?.count || 0} flashcards</span>
+      </div>
+    </div>
 
-                  <button
-                    onClick={() => handleStartReview(quiz.id)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300"
-                  >
-                    <Play className="w-4 h-4" />
-                    Start Review
-                  </button>
-                </div>
-              ))}
+    <button
+      onClick={() => handleStartReview(quiz.id)}
+      className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all duration-300"
+    >
+      <Play className="w-4 h-4" />
+      Start Review
+    </button>
+  </div>
+))}
             </div>
           )}
         </div>

@@ -71,7 +71,6 @@ const TeacherDashboard = () => {
           id,
           title,
           lesson_id,
-          time_limit,
           created_at,
           quiz_code,
           lessons (

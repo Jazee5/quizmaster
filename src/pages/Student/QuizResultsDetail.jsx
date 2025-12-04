@@ -21,21 +21,23 @@ const QuizResultsDetail = () => {
   const fetchQuizResults = async () => {
     try {
       // Fetch quiz details with course and lesson
-      const { data: quizData, error: quizError } = await supabase
-        .from('quizzes')
-        .select(`
-          *,
-          course:course_id (
-            id,
-            name,
-            subject
-          ),
-          lesson:lesson_id (
-            id,
-            name,
-            period
-          )
-        `)
+      const { data, error } = await supabase
+  .from('quizzes')
+  .select(`
+    id,
+    title,
+    created_at,
+    questions(count),
+    lessons (
+      id,
+      lesson_name,
+      courses (
+        id,
+        course_name,
+        subject
+      )
+    )
+  `)
         .eq('id', quizId)
         .eq('user_id', user.id) // Ensure teacher owns this quiz
         .single();

@@ -60,22 +60,21 @@ const TakeQuiz = () => {
   const fetchQuizData = async () => {
     try {
       const { data: quizData, error: quizError } = await supabase
-        .from("quizzes")
-        .select(`
-          *,
-          course:course_id (
-            id,
-            name,
-            subject
-          ),
-          lesson:lesson_id (
-            id,
-            name,
-            period
-          )
-        `)
-        .eq("id", quizId)
-        .single();
+  .from("quizzes")
+  .select(`
+    *,
+    lessons (
+      id,
+      lesson_name,
+      courses (
+        id,
+        course_name,
+        subject
+      )
+    )
+  `)
+  .eq("id", quizId)
+  .single();
       if (quizError) throw quizError;
 
       const { data: questionsData, error: questionsError } = await supabase
@@ -385,26 +384,25 @@ const TakeQuiz = () => {
                 </div>
 
                 {/* Show course/subject if available */}
-                {(quiz.course?.name || quiz.course?.subject || quiz.lesson?.period) && (
-                  <div className="flex flex-wrap gap-2 justify-center mb-6">
-                    {quiz.course?.name && (
-                      <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                        {quiz.course.name}
-                      </span>
-                    )}
-                    {quiz.course?.subject && (
-                      <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                        {quiz.course.subject}
-                      </span>
-                    )}
-                    {quiz.lesson?.period && (
-                      <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold rounded-full uppercase tracking-wider">
-                        {quiz.lesson.period}
-                      </span>
-                    )}
-                  </div>
-                )}
-
+               {(quiz.lessons?.courses?.course_name || quiz.lessons?.courses?.subject || quiz.lessons?.lesson_name) && (
+                <div className="flex flex-wrap gap-2 justify-center mb-6">
+                  {quiz.lessons?.courses?.course_name && (
+                    <span className="px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                      {quiz.lessons.courses.course_name}
+                    </span>
+                  )}
+                  {quiz.lessons?.courses?.subject && (
+                    <span className="px-3 py-1 bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                      {quiz.lessons.courses.subject}
+                    </span>
+                  )}
+                  {quiz.lessons?.lesson_name && (
+                    <span className="px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-semibold rounded-full uppercase tracking-wider">
+                      {quiz.lessons.lesson_name}
+                    </span>
+                  )}
+                </div>
+              )}
                 <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-3 sm:p-4 mb-6 text-sm sm:text-base">
                   <p className="text-cyan-300 font-bold uppercase tracking-wide mb-2">⏱️ Timed Questions</p>
                   <div className="text-gray-300 space-y-1">
