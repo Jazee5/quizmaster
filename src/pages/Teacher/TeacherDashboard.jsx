@@ -22,10 +22,12 @@ import {
   Shield
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import { usePreventZoom } from '../../hooks/usePreventZoom'; 
 
 const TeacherDashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  usePreventZoom();
   const [quizzes, setQuizzes] = useState([]);
   const [filteredQuizzes, setFilteredQuizzes] = useState([]);
   const [stats, setStats] = useState({ totalQuizzes: 0, totalAttempts: 0 });
