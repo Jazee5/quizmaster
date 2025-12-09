@@ -1,4 +1,4 @@
-// src/pages/QuizLeaderboard.jsx
+// src/pages/QuizLeaderboard.jsx - Real-time version
 import { useState, useEffect } from "react";
 import { supabase } from "../../config/supabaseClient";
 import { useAuth } from "../../context/AuthContext";
@@ -12,6 +12,30 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
   useEffect(() => {
     if (quizId && user) {
       fetchRankings();
+      
+      // Set up real-time subscription
+      const channel = supabase
+        .channel(`quiz-leaderboard-${quizId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'scores',
+            filter: `quiz_id=eq.${quizId}`
+          },
+          (payload) => {
+            console.log('Real-time update received:', payload);
+            // Refresh rankings when any change occurs
+            fetchRankings();
+          }
+        )
+        .subscribe();
+
+      // Cleanup subscription on unmount
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [quizId, user]);
 
@@ -24,14 +48,13 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
           profiles:user_id (username, full_name, email)
         `)
         .eq("quiz_id", quizId)
-        .order("created_at", { ascending: false }); // Get all scores, newest first
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
       // Get only the latest attempt for each user
       const latestScores = {};
       data.forEach((score) => {
-        // If we haven't seen this user yet, or this score is newer, store it
         if (!latestScores[score.user_id]) {
           latestScores[score.user_id] = score;
         }
@@ -45,12 +68,10 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
         const percentA = (a.score / a.total_questions) * 100;
         const percentB = (b.score / b.total_questions) * 100;
         
-        // Sort by percentage descending (highest first)
         if (percentB !== percentA) {
           return percentB - percentA;
         }
         
-        // If same percentage, sort by total score
         return b.score - a.score;
       });
 
@@ -65,7 +86,7 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
                      'Anonymous'
       }));
 
-      setRankings(rankedData); // Show all unique users
+      setRankings(rankedData);
 
       // Find the logged-in user's rank
       const myRank = rankedData.findIndex((r) => r.user_id === user.id);
@@ -113,9 +134,15 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 max-w-2xl mx-auto mt-8">
-      <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
-        🏆 Quiz Leaderboard
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+          🏆 Quiz Leaderboard
+        </h2>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-xs text-gray-500 font-medium">Live</span>
+        </div>
+      </div>
 
       {/* User's Rank Display */}
       {userRank && (
@@ -193,7 +220,7 @@ const QuizLeaderboard = ({ quizId, userScore }) => {
       {/* Legend */}
       <div className="mt-6 pt-4 border-t border-gray-200">
         <p className="text-xs text-gray-500 text-center">
-          Showing latest attempt for each student • Sorted by highest score
+          Showing latest attempt for each student • Sorted by highest score • Updates in real-time
         </p>
       </div>
     </div>

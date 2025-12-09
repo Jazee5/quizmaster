@@ -1,8 +1,8 @@
-// src/pages/Login.jsx - FIXED VERSION
+// src/pages/Login.jsx - Auto-signup with STRICT campus Gmail validation
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, Mail, Lock, AlertCircle, Zap, ArrowLeftRight } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, Zap, ArrowLeftRight, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../config/supabaseClient';
 
 const Login = () => {
@@ -13,6 +13,7 @@ const Login = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
+  // STRICT: Only allow school campus Gmail with numbers
   const studentEmailPattern = /^(?=.*\d)[a-zA-Z0-9._]+@gmail\.com$/;
 
   useEffect(() => {
@@ -21,9 +22,10 @@ const Login = () => {
 
       const user = session.user;
 
+      // STRICT: Verify email pattern
       if (!studentEmailPattern.test(user.email)) {
         await supabase.auth.signOut();
-        setError('⚠️ This email is not a student account. Please use teacher login.');
+        setError('⚠️ Invalid campus email. Only school Gmail accounts with numbers are allowed.');
         return;
       }
 
@@ -34,10 +36,12 @@ const Login = () => {
         .single();
 
       if (!existingProfile) {
+        // Auto-create profile for valid campus Gmail
         await supabase.from('profiles').insert([{
           id: user.id,
           email: user.email,
           full_name: user.user_metadata.full_name || user.user_metadata.name || user.email.split('@')[0],
+          username: user.email.split('@')[0],
           role: 'student',
         }]);
       } else if (existingProfile.role !== 'student') {
@@ -69,43 +73,55 @@ const Login = () => {
       return;
     }
 
-    if (!studentEmailPattern.test(email.toLowerCase())) {
-      setError('Invalid student email format. Use letters/numbers/dots/underscores with @gmail.com, at least 1 number.');
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // STRICT VALIDATION: Must be campus Gmail with numbers
+    if (!studentEmailPattern.test(normalizedEmail)) {
+      setError('❌ Invalid campus email format. Must be a school Gmail (e.g., student123@gmail.com) with at least 1 number.');
       setLoading(false);
       return;
     }
 
-    try {
-      const normalizedEmail = email.toLowerCase();
+    // Additional strict checks (customize based on your school's email pattern)
+    // Example: Block certain patterns, require specific format, etc.
+    
+    // Optional: Check if email contains school identifier
+    // const hasSchoolId = /student\d+/.test(normalizedEmail); // Checks for "student" + numbers
+    // if (!hasSchoolId) {
+    //   setError('❌ Email must follow school format (e.g., student123@gmail.com)');
+    //   setLoading(false);
+    //   return;
+    // }
 
-      // Step 1: Try to sign in
+    try {
+      // Step 1: Try to sign in first
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       });
 
-      // If sign in is successful, navigate to dashboard
+      // If sign in successful, navigate
       if (signInData?.user && !signInError) {
         navigate('/dashboard');
         return;
       }
 
-      // Step 2: If sign in fails, try to sign up (might be a new user)
+      // Step 2: If sign in fails, try signup (first-time student)
       if (signInError) {
+        // Only auto-signup if it's a valid campus Gmail
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
             data: {
-              role: 'student'
+              role: 'student',
+              full_name: normalizedEmail.split('@')[0]
             }
           }
         });
 
-        // Check if signup was successful
         if (signUpData?.user && !signUpError) {
-          // Check if this is a truly new user or existing user
-          // signUpData.user.identities will be empty array if user already exists
+          // Check if this is truly a new user
           if (signUpData.user.identities && signUpData.user.identities.length === 0) {
             // User already exists - wrong password
             setError('❌ Incorrect password. Please try again.');
@@ -113,29 +129,29 @@ const Login = () => {
             return;
           }
 
-          // This is a new user - create profile
+          // New user - create profile
           try {
             await supabase.from('profiles').insert({
               id: signUpData.user.id,
               email: signUpData.user.email,
               full_name: signUpData.user.email.split('@')[0],
+              username: signUpData.user.email.split('@')[0],
               role: 'student',
             });
           } catch (profileError) {
             console.error('Profile creation error:', profileError);
-            // Continue anyway - profile will be created by useEffect
           }
 
           navigate('/dashboard');
           return;
         }
 
-        // If signup also failed, show appropriate error
+        // Signup failed
         if (signUpError) {
           if (signUpError.message.includes('already registered')) {
             setError('❌ Incorrect password. Please try again.');
           } else {
-            setError(signUpError.message);
+            setError(`❌ ${signUpError.message}`);
           }
           setLoading(false);
           return;
@@ -143,7 +159,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in. Please try again.');
+      setError('❌ Failed to sign in. Please check your credentials and try again.');
     } finally {
       setLoading(false);
     }
@@ -188,7 +204,8 @@ const Login = () => {
               </div>
             )}
 
-            {/* SIMPLE TOGGLE BUTTON */}
+            
+            {/* TOGGLE BUTTON */}
             <div className="mb-3 flex justify-end">
               <button
                 type="button"
@@ -203,7 +220,7 @@ const Login = () => {
               {/* Campus Email Input */}
               <div>
                 <label className="block text-xs font-bold text-cyan-300 mb-1 uppercase tracking-wide">
-                  Campus Email
+                  Campus Gmail
                 </label>
                 <div className="relative group">
                   <Mail className="absolute left-2.5 top-1/3 transform -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 group-focus-within:text-cyan-300 transition-colors pointer-events-none" />
@@ -213,11 +230,11 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value.toLowerCase())}
                     autoComplete="username"
                     className="w-full bg-gray-900/50 border-2 border-cyan-500/30 text-white text-sm rounded-lg py-1.5 pl-9 pr-2.5 focus:outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-500/20 transition-all placeholder-gray-500"
-                    placeholder="SPC@gmail.com"
+                    placeholder="student123@gmail.com"
                     required
                   />
                   <div className="mt-1 text-xs text-gray-400 ml-1">
-                    Must be a <span className="text-cyan-400 font-semibold">Student SPC Gmail</span>
+                    SPC Gmail with <span className="text-cyan-400 font-semibold">numbers required</span>
                   </div>
                 </div>
               </div>
@@ -239,6 +256,13 @@ const Login = () => {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Info Box */}
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 mt-3">
+                <p className="text-xs text-purple-300 text-center font-semibold">
+                  ℹ️ First time? Account will be created automatically
+                </p>
               </div>
 
               {/* Sign In Button */}
