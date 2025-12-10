@@ -22,6 +22,13 @@ const Login = () => {
 
       const user = session.user;
 
+      // Check if email is confirmed
+      if (!user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setError('📧 Please verify your email first. Check your Gmail inbox for the confirmation link.');
+        return;
+      }
+
       // STRICT: Verify email pattern
       if (!studentEmailPattern.test(user.email)) {
         await supabase.auth.signOut();
@@ -36,15 +43,12 @@ const Login = () => {
         .single();
 
       if (!existingProfile) {
-        // Auto-create profile for valid campus Gmail
-        await supabase.from('profiles').insert([{
-          id: user.id,
-          email: user.email,
-          full_name: user.user_metadata.full_name || user.user_metadata.name || user.email.split('@')[0],
-          username: user.email.split('@')[0],
-          role: 'student',
-        }]);
-      } else if (existingProfile.role !== 'student') {
+        await supabase.auth.signOut();
+        setError('❌ Profile not found. Please contact support.');
+        return;
+      }
+
+      if (existingProfile.role !== 'student') {
         await supabase.auth.signOut();
         setError('⚠️ This account is registered as a teacher. Please use teacher login.');
         return;
@@ -109,10 +113,12 @@ const Login = () => {
       // Step 2: If sign in fails, try signup (first-time student)
       if (signInError) {
         // Only auto-signup if it's a valid campus Gmail
+        // IMPORTANT: Enable email confirmation in Supabase to prevent fake emails
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: {
               role: 'student',
               full_name: normalizedEmail.split('@')[0]
@@ -129,20 +135,9 @@ const Login = () => {
             return;
           }
 
-          // New user - create profile
-          try {
-            await supabase.from('profiles').insert({
-              id: signUpData.user.id,
-              email: signUpData.user.email,
-              full_name: signUpData.user.email.split('@')[0],
-              username: signUpData.user.email.split('@')[0],
-              role: 'student',
-            });
-          } catch (profileError) {
-            console.error('Profile creation error:', profileError);
-          }
-
-          navigate('/dashboard');
+          // IMPORTANT: Show message that email confirmation is required
+          setError('📧 Verification email sent! Please check your Gmail inbox and click the confirmation link to activate your account.');
+          setLoading(false);
           return;
         }
 
@@ -198,13 +193,20 @@ const Login = () => {
 
           <div className="relative z-10">
             {error && (
-              <div className="bg-red-500/10 border-2 border-red-500 text-red-400 px-2.5 py-1.5 rounded-lg flex items-start gap-2 mb-2.5 backdrop-blur-sm">
+              <div className={`${error.includes('📧') ? 'bg-blue-500/10 border-blue-500 text-blue-400' : 'bg-red-500/10 border-red-500 text-red-400'} border-2 px-2.5 py-1.5 rounded-lg flex items-start gap-2 mb-2.5 backdrop-blur-sm`}>
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <span className="text-xs font-semibold leading-tight">{error}</span>
               </div>
             )}
 
-            
+            {/* Security Notice */}
+            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-2 mb-3 flex items-start gap-2">
+              <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-cyan-300 font-semibold">
+                Only school campus Gmail accounts allowed
+              </p>
+            </div>
+
             {/* TOGGLE BUTTON */}
             <div className="mb-3 flex justify-end">
               <button
@@ -213,6 +215,7 @@ const Login = () => {
                 className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-600/50 text-cyan-300 text-xs font-bold py-2 px-4 rounded-lg uppercase tracking-wider hover:scale-105 transition-all border border-cyan-500/30"
               >
                 <ArrowLeftRight className="w-4 h-4" />
+                Teacher
               </button>
             </div>
 
@@ -223,7 +226,7 @@ const Login = () => {
                   Campus Gmail
                 </label>
                 <div className="relative group">
-                  <Mail className="absolute left-2.5 top-1/3 transform -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 group-focus-within:text-cyan-300 transition-colors pointer-events-none" />
+                  <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 group-focus-within:text-cyan-300 transition-colors pointer-events-none" />
                   <input
                     type="text"
                     value={email}
@@ -234,7 +237,7 @@ const Login = () => {
                     required
                   />
                   <div className="mt-1 text-xs text-gray-400 ml-1">
-                    SPC Gmail with <span className="text-cyan-400 font-semibold">numbers required</span>
+                    School Gmail with <span className="text-cyan-400 font-semibold">numbers required</span>
                   </div>
                 </div>
               </div>
@@ -261,7 +264,7 @@ const Login = () => {
               {/* Info Box */}
               <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 mt-3">
                 <p className="text-xs text-purple-300 text-center font-semibold">
-                  ℹ️ First time? Account will be created automatically
+                  ℹ️ First time? You'll receive a verification email
                 </p>
               </div>
 
