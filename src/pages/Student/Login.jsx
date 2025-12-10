@@ -199,13 +199,7 @@ const Login = () => {
               </div>
             )}
 
-            {/* Security Notice */}
-            <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-2 mb-3 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-cyan-300 font-semibold">
-                Only school campus Gmail accounts allowed
-              </p>
-            </div>
+            
 
             {/* TOGGLE BUTTON */}
             <div className="mb-3 flex justify-end">
@@ -226,14 +220,14 @@ const Login = () => {
                   Campus Gmail
                 </label>
                 <div className="relative group">
-                  <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 group-focus-within:text-cyan-300 transition-colors pointer-events-none" />
+                  <Mail className="absolute left-2.5 top-1/3 transform -translate-y-1/2 w-3.5 h-3.5 text-cyan-400 group-focus-within:text-cyan-300 transition-colors pointer-events-none" />
                   <input
                     type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value.toLowerCase())}
                     autoComplete="username"
                     className="w-full bg-gray-900/50 border-2 border-cyan-500/30 text-white text-sm rounded-lg py-1.5 pl-9 pr-2.5 focus:outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-500/20 transition-all placeholder-gray-500"
-                    placeholder="student123@gmail.com"
+                    placeholder="fullnameID@gmail.com"
                     required
                   />
                   <div className="mt-1 text-xs text-gray-400 ml-1">
@@ -261,12 +255,7 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Info Box */}
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2 mt-3">
-                <p className="text-xs text-purple-300 text-center font-semibold">
-                  ℹ️ First time? You'll receive a verification email
-                </p>
-              </div>
+              
 
               {/* Sign In Button */}
               <button
