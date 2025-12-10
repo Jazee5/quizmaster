@@ -209,7 +209,7 @@ const Login = () => {
                 className="flex items-center gap-2 bg-gray-700/50 hover:bg-gray-600/50 text-cyan-300 text-xs font-bold py-2 px-4 rounded-lg uppercase tracking-wider hover:scale-105 transition-all border border-cyan-500/30"
               >
                 <ArrowLeftRight className="w-4 h-4" />
-                Teacher
+                
               </button>
             </div>
 
